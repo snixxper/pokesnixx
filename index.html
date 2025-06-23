@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Cartas Pokémon</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Responsive grid */
+            gap: 16px;
+        }
+        .card-item {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        .card-image {
+            width: 100%;
+            height: auto;
+            object-fit: contain; /* Ensure the image fits within its container */
+            border-bottom: 1px solid #e5e7eb; /* Light border below image */
+        }
+        .card-details {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .card-name {
+            font-weight: 600;
+            font-size: 1.125rem; /* text-lg */
+            margin-bottom: 8px;
+            color: #1f2937; /* Dark gray text */
+        }
+        .card-info {
+            font-size: 0.875rem; /* text-sm */
+            color: #6b7280; /* Medium gray text */
+            margin-bottom: 4px;
+        }
+        .card-price {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #10b981; /* Green for price */
+            background-color: #d1fae5; /* Light green background */
+            padding: 4px 8px;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+        .card-set { /* Style for the set name */
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #4f46e5; /* Indigo for set name */
+            background-color: #e0e7ff; /* Light indigo background */
+            padding: 4px 8px;
+            border-radius: 8px;
+            margin-top: 4px;
+        }
+        .card-obtained {
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-top: 4px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            color: #ffffff;
+            cursor: pointer; /* Indicate it's clickable */
+            transition: background-color 0.2s ease-in-out;
+        }
+        .card-obtained.true {
+            background-color: #34d399; /* Green if obtained */
+        }
+        .card-obtained.false {
+            background-color: #ef4444; /* Red if not obtained */
+        }
+        /* Style for loading indicator */
+        #loading-indicator {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+    <!-- Header Section -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 rounded-xl shadow-lg mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center">
+        <div class="text-center sm:text-left mb-2 sm:mb-0">
+            <h1 class="text-3xl sm:text-4xl font-bold">Pokesnixx</h1>
+            <p class="text-lg sm:text-xl opacity-90">Explora y visualiza tus cartas favoritas</p>
+        </div>
+        <!-- New element for total price display -->
+        <div id="total-price-display" class="bg-white text-blue-800 p-3 rounded-lg text-xl font-bold shadow-md mt-4 sm:mt-0">
+            Total: $0.00
+        </div>
+    </header>
+
+    <!-- Filter Section -->
+    <section class="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-lg mb-8">
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <div class="w-full sm:w-auto">
+                <label for="name-filter" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                <input type="text" id="name-filter" placeholder="Nombre de la carta"
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div class="w-full sm:w-40">
+                <label for="number-filter" class="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                <input type="text" id="number-filter" placeholder="Número de la carta"
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div class="w-full sm:w-auto">
+                <label for="obtained-filter" class="block text-sm font-medium text-gray-700 mb-1">Obtenida/No Obtenida</label>
+                <select id="obtained-filter"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="all">Todas</option>
+                    <option value="true">Obtenidas</option>
+                    <option value="false">No Obtenidas</option>
+                </select>
+            </div>
+            <div class="w-full sm:w-auto">
+                <label for="set-filter" class="block text-sm font-medium text-gray-700 mb-1">Set</label>
+                <select id="set-filter"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="all">Todos los Sets</option>
+                    <option value="Paldean Fates">Paldean Fates</option>
+                    <!-- Add more sets here dynamically if needed -->
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto">
+        <div id="loading-indicator" class="hidden">Cargando cartas...</div>
+        <div id="card-display" class="card-grid">
+            <!-- Pokémon cards will be loaded here by JavaScript -->
+        </div>
+    </main>
+
+    <script type="module">
+        // Import necessary Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase configuration (provided by the Canvas environment)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let userId = null; // Will store the authenticated user ID
+        let isAuthReady = false; // Flag to indicate if authentication is complete
+
+        // Pokémon card data (initial master list)
+        // This array will be modified with 'obtained' status from Firestore
+        const masterPokemonCards = [
+            {
+                "name": "Oddish",
+                "number": "092/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/a8/0b/f0/a80bf03d5bd3c1f6c59e01fd1f8ddb04427ecb6e33759108827ba9f7ef32f603.jpg",
+                "price": "$5.46",
+                "obtained": false, // Default value
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Gloom",
+                "number": "093/091",
+                "imageUrl": "https://tcgplayer-cdn.tcgplayer.com/product/534460_in_1000x1000.jpg",
+                "price": "$5.46",
+                "obtained": false, // Default value
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Vileplume",
+                "number": "094/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/9c/65/63/9c65636399f2f4ff4dc4b57edaccb366b7044435fb63731dc1312546360a08f7.jpg",
+                "price": "$5.04",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Scyther",
+                "number": "095/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/1e/c6/41/1ec641930ee1718e540d96c0ec7515a802f3f815ef04b2d8473a99632b9c9de4.jpg",
+                "price": "$6.35",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Hoppip",
+                "number": "096/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/8c/bd/7c/8cbd7c802dea0af12ec651b81fc505d0c230f06181807c4df71cb3b9342dafcc.jpg",
+                "price": "$2.34",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Skiploom",
+                "number": "097/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d0/20/87/d020879f8bd4a6192ae6e181368b3f4d132b0ec81bccdd1b1bde07b4dfe9f132.jpg",
+                "price": "$2.00",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Jumpluff",
+                "number": "098/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/f8/3d/8a/f83d8ab757bd6ba090a031907e0ed3ab7339bf8ba23f0dd706f259e192848f92.jpg",
+                "price": "$3.25",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pineco",
+                "number": "099/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/95/b6/ce/95b6ced3cdfe7aec007586555e4c43176c2b1aaa712f933fa21bd67ea4f6f7a1.jpg",
+                "price": "$2.09",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Snover",
+                "number": "100/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/3f/d9/f3/3fd9f321d89e6a25aa67d71680ff2541ef99f0025a42ecfc1ba0581e8a879d61.jpg",
+                "price": "$1.81",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Abomasnow",
+                "number": "101/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/68/5a/0d/685a0d6cae664e559f3ed4aaba4813e0fe3a196345837054589097c9c1a0a2f9.jpg",
+                "price": "$1.89",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Smoliv",
+                "number": "102/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/19/ee/d2/19eed2d92fc62302722042ea63bb9470474849340a85623095c694005c0b6b47.jpg",
+                "price": "$2.95",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Dolliv",
+                "number": "103/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/6b/fd/07/6bfd070e9a935f6517cc1b9fc3379bcfffe17bc878037c138660f54f56bec108.jpg",
+                "price": "$2.03",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Arboliva",
+                "number": "104/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/5c/fb/a0/5cfba0de02fc0de84dde35d029b65dc47100a30df3a9953b21344d127144ced9.jpg",
+                "price": "$1.89",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Toedscool",
+                "number": "105/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/ae/ee/60/aeee60128d8b443172bce3940e9e3421aa451c0cfd01d5f9fb11f0d12d7b7203.jpg",
+                "price": "$3.09",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Capsakid",
+                "number": "106/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/e5/34/68/e53468ac698b102485982af3d2a5ea845750f3d5979131b9ab3a69dbcd1b0616.jpg",
+                "price": "$1.81",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Scovillain",
+                "number": "107/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/4b/4e/a9/4b4ea98463993a67f1487b9e1c5d5a0deec988c63cb702c71bf00a21efd14af5.jpg",
+                "price": "$1.67",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Rellor",
+                "number": "108/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/75/c1/72/75c172c283b7d5b047388ab19a7a203bc42aef4726dc4fcbb9ff7dc2e57f4099.jpg",
+                "price": "$2.05",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Charmander",
+                "number": "109/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/3c/00/ca/3c00caccd795087a672cdc441c1ac493f9d692522db41475e2eceb71eb77c255.jpg",
+                "price": "$21.61",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Charmeleon",
+                "number": "110/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/4f/41/fb/4f41fb34b20d774d1a5276a65468a95d11dadd90771a2503ba728065aac38ceb.jpg",
+                "price": "$14.41",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Paldean Tauros",
+                "number": "111/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/f9/da/f2/f9daf2c80b16d5907bcb3736c507934808df40235baf62c248b18f4581344c6c.jpg",
+                "price": "$2.23",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Entei",
+                "number": "112/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d7/4d/7e/d74d7e14c387d214efb834a8568317ab6b5bbbdc258d4da4b59bf223698f013c.jpg",
+                "price": "$8.89",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Oricorio",
+                "number": "113/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/99/93/4e/99934e5676aa048b33e8083dcb80f645474005ab41bce49c758146a2c46f6dbe.jpg",
+                "price": "$1.86",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Charcadet",
+                "number": "114/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/44/df/d0/44dfd00759e69ad996d3e9be87f79977748534ac2599309453027df3ba6b1e17.jpg",
+                "price": "$4.61",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Armarouge",
+                "number": "115/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d1/67/da/d167da1236655a6b44f3edd69d787f7ced1a1cb4195da82626da2fd78321c910.jpg",
+                "price": "$5.15",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Slowpoke",
+                "number": "116/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/68/26/a7/6826a78db3075c2d06cdb5747eb8b2aa1c52ee2ac2cb0a033313acce1300f9c5.jpg",
+                "price": "$7.29",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Slowbro",
+                "number": "117/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/69/2d/5f/692d5fa3a0d3523c65a9c05c3789df6846250897d7d2ddc801943b10fda44870.jpg",
+                "price": "$5.57",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Staryu",
+                "number": "118/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/ab/5b/93/ab5b93ea5379ed9068061bf84919002b547033b6890b6b0067fccdd75f289192.jpg",
+                "price": "$3.53",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Starmie",
+                "number": "119/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/17/dc/74/17dc74e94d3c3feaf0a1f8dd3a672b02f274632df1115167b2d3e86f2faffed1.jpg",
+                "price": "$4.54",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Paldean Tauros",
+                "number": "120/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/3c/0f/f8/3c0ff8f2ca3efe124b51fe49d15ae6de86275dc86ff40e6c93bd98ff7aef4d01.jpg",
+                "price": "$2.22",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Wiglett",
+                "number": "121/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/cd/a5/27/cda52746ed2821ba61c88a8da6b51f5b32387f8464ddab0860dcf0fa5e28e877.jpg",
+                "price": "$2.27",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Wugtrio",
+                "number": "122/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/4f/3c/6d/4f3c6d900fa1d3a6c7685eff3d38baeb695c491167a09c7ffd532dc3f752fea9.jpg",
+                "price": "$2.11",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Finizen",
+                "number": "123/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/fd/ff/e9/fdffe94697fb878d57bca24769066ac50e7cc9a8c3c9dbf573be773eca98dd77.jpg",
+                "price": "$3.03",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Palafin",
+                "number": "124/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/de/3d/d2/de3dd2d90104d6e3d8e60e20816d8cecea041ed7d86b430e08febc5c57f89d3b.jpg",
+                "price": "$1.99",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Veluza",
+                "number": "125/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/58/20/38/582038b424a5e7be69205cdbb461e0d6501f951d9475d15786147e5bfa0b6bd4.jpg",
+                "price": "$1.66",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Dondozo",
+                "number": "126/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/b8/08/fe/b808fe1a35c023c2d9b923e6e96111d7ca1dfd5bd0bcd39aab42ce55980728f2.jpg",
+                "price": "$2.19",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Tatsugiri",
+                "number": "127/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d4/40/03/d44003b6cd1a55e897ae2695ea32f6b494dd8aa148a70f5880e2393f4a548dbe.jpg",
+                "price": "$3.85",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Frigibax",
+                "number": "128/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/64/da/1e/64da1e495dc9aef15e829598099a1762cad99d41dd5f71b59ccb012c5681fc1f.jpg",
+                "price": "$4.14",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Arctibax",
+                "number": "129/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/19/49/fc/1949fcd32eeb046b66e7abf169b3389b158d7a2fcaae5cfd476536ab2dd916b2.jpg",
+                "price": "$3.55",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Baxcalibur",
+                "number": "130/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/3b/93/6e/3b936e2673844bed367e281f411720ae3fe2114154c78888fd762c8a05b599bf.jpg",
+                "price": "$2.94",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pikachu",
+                "number": "131/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/be/64/c1/be64c19286fb16af5d46bdec22817e6f049097bbad1ccbd1e1494e0b1bd70492.jpg",
+                "price": "$29.21",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Raichu",
+                "number": "132/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/de/c6/00/dec6000beef5b35b6315896117a6ec5b45ca3b3b0326c2cfb0d8fa3a68e3403c.jpg",
+                "price": "$8.04",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Voltorb",
+                "number": "133/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/7c/31/33/7c3133b2c1f7cbe9a9507719c24c407915545d23eec1cdaa6bb2bd4c55f09601.jpg",
+                "price": "$2.63",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Electrode",
+                "number": "134/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/b3/da/b9/b3dab9ff76ca134e8365e86a38aa97b173cecb344b75e58c87741de61c46f83c.jpg",
+                "price": "$3.02",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Shinx",
+                "number": "135/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/a2/b0/b3/a2b0b33551e5896e52181fb5745b994613738178d7c4c25346e67d099421d511.jpg",
+                "price": "$9.13",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Luxio",
+                "number": "136/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/75/b6/d3/75b6d390af7625e0785e94dc7de22dfbfdec4cc00d0fb8e03f0700afc44f8941.jpg",
+                "price": "$4.09",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Luxray",
+                "number": "137/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/02/94/c9/0294c992ce82a34a9fe9eba4f278e8eb081ec03759c10a15031225517a3687ba.jpg",
+                "price": "$9.30",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pachirisu",
+                "number": "138/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/f5/6d/e3/f56de3b53e5c7fbb6a00fb62c9af86add22cc09bf8eb50837848131930f4b660.jpg",
+                "price": "$4.62",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Thundurus",
+                "number": "139/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/19/8d/9a/198d9af6aac2e70d0dfa660c112d05f6d9c57d9094cdec6b8c3b32c91f871ed6.jpg",
+                "price": "$2.23",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Toxel",
+                "number": "140/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/48/c8/d4/48c8d44f93b1909b24852a343eaa95483c4dda6ddd1af01dcd989724fe009557.jpg",
+                "price": "$2.74",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Toxtricity",
+                "number": "141/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/06/ed/60/06ed608a4424d5a15248281e87e382ac324dd3811123c990b4ded0a83064d730.jpg",
+                "price": "$1.78",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pawmi",
+                "number": "142/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/92/8b/76/928b76dd25fc32dd55a86459f367d3e284fc7d46b8ba17bb9200937ab446b7de.jpg",
+                "price": "$2.68",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pawmo",
+                "number": "143/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/96/4b/23/964b23760b7c6e6efcd9809992b361abcd7c7e1e6b5e27ee3beb14afb27f040e.jpg",
+                "price": "$2.61",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pawmot",
+                "number": "144/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d7/95/43/d79543332c0f3be015cb49d31f9a424898e3563bb42356d745c79faee0c727ca.jpg",
+                "price": "$2.85",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Wattrel",
+                "number": "145/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/1d/24/02/1d24023392bf9a21ca9921cf936f9f089e525adde951f85c16bf6357ffa0e487.jpg",
+                "price": "$2.50",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Kilowattrel",
+                "number": "146/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d7/b1/27/d7b127872c20fb4587ff3d87e68d3cc7967e1be43e9c2c60fa04e9a9c175d274.jpg",
+                "price": "$1.47",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Wigglytuff",
+                "number": "147/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d7/dc/30/d7dc303293b7cd1d035de95797e29690fa994305ab77f1f942ea57b4754baba7.jpg",
+                "price": "$2.34",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Abra",
+                "number": "148/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/f3/25/43/f32543b67fd521a59761ce39c299496e3b60292257e9059e235231dbd42dcb9f.jpg",
+                "price": "$5.98",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Kadabra",
+                "number": "149/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/8e/8b/7a/8e8b77aea6c7dd0207fdd6c7fbcfa825586a535ebae16a57171f6ad960617ea95.jpg",
+                "price": "$5.47",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Cleffa",
+                "number": "150/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/79/bc/4e/79bc4e6ff6b58e1b69ae5314890b827e4296c866785f08d17519002a1dd235d3.jpg",
+                "price": "$3.21",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Natu",
+                "number": "151/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/e1/d4/43/e1d443177f3e0636af1699a232f00af56346bf749897127dbe65cda4225f4b84.jpg",
+                "price": "$2.40",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Xatu",
+                "number": "152/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/bb/0f/f4/bb0ff485303c5fcb8baba8ac32f219e99a9194710b74d2a7078dfa16920c7e3d.jpg",
+                "price": "$3.58",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Ralts",
+                "number": "153/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/36/ba/e8/36bae85461d825a3216d76be617bc2e052f92547cee121e63019b8c93f8644c7.jpg",
+                "price": "$15.84",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Kirlia",
+                "number": "154/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/94/30/37/9430378da50ed55eada6d6e852edc75187b3559ec4f505eab18cf394e9f12320.jpg",
+                "price": "$13.43",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Drifloon",
+                "number": "155/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/e7/67/46/e76746767c1478eedec353c90e6b714cb33ab411a180426aebaae117a3284f11.jpg",
+                "price": "$6.30",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Drifblim",
+                "number": "156/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/66/d8/dd/66d8ddeae811a6d30a6f7724ba75c182fd597415e1bf2681618659adc49a287c.jpg",
+                "price": "$2.33",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Mime Jr.",
+                "number": "157/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/63/50/8a/63508a7fa12ecb18cd60dcad7c6aa14a6550228e28433e88910a0f818364735e.jpg",
+                "price": "$2.52",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Spiritomb",
+                "number": "158/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/11/81/0a/11810a5bfbc2b7214a6a636f414a83d7fb0a8b5c252ada24f1cf3d9b7d6ed879.jpg",
+                "price": "$3.78",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Klefki",
+                "number": "159/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/70/8d/91/708d91b6eb36bdf613f9b092a02a5d0519b93adf7e10ca4f51586e4503c18cb7.jpg",
+                "price": "$3.82",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Mimikyu",
+                "number": "160/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/86/f7/11/86f7118fb4a6caa1ded8b45f27b43ef2e826eefa8b9c6e55163e84fa4fe6d82c.jpg",
+                "price": "$15.48",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Dachsbun",
+                "number": "161/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/c8/dc/c3/c8dcc35dba3d5015224417c9c2543e938e45977cae73ca5d1c8a87fc72e53f15.jpg",
+                "price": "$4.61",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Ceruledge",
+                "number": "162/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/97/19/55/97195599bed45cb57f64a40a87f0fe03a5f1fa59a49271a197c9309ea9a2d092.jpg",
+                "price": "$5.71",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Rabsca",
+                "number": "163/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/c7/cd/5a/c7cd5adde8c87abb63386fa6fed467fe117025ae5fc1294d16714abbf10a1c98.jpg",
+                "price": "$1.75",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Flittle",
+                "number": "164/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/77/12/33/771233e71e05035439edfedf5ffdd02ce6bb79eedd3c58cf160260c91bda65d2.jpg",
+                "price": "$1.29",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Tinkatink",
+                "number": "165/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/90/94/c1/9094c15de5d2abf2b00ff8cac7e996bbd435a35c9ddeb5709c95875164250af3.jpg",
+                "price": "$3.83",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Tinkatuff",
+                "number": "166/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/4d/38/06/4d38065fd11d59e86a096c5d86ba33db892c6092325c42a3bbcfaecd34dc891d.jpg",
+                "price": "$3.38",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Tinkaton",
+                "number": "167/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/62/1c/ce/621cced4efff4f3e66e772cedbec8be14d43f9ac8cbaf250784da632274ed0f5.jpg",
+                "price": "$4.92",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Houndstone",
+                "number": "168/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/74/b0/9f/74b09ff7e45ba522a5da9b607022281e56bb600c5fd9827acdce876a5fcff83d.jpg",
+                "price": "$1.40",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Mankey",
+                "number": "169/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/11/64/65/116465bc8feb986e607d5a1472bb9e93e2bcc91493d44253dcddafa4868ea73a.jpg",
+                "price": "$2.80",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Primeape",
+                "number": "170/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/f3/f9/a3/f3f9a36265d7a4a5eaaa8d97fdbbef9503457c5c8483f862e6412f78370a7834.jpg",
+                "price": "$2.76",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Annihilape",
+                "number": "171/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/60/b8/6b/60b86b530eb827b6d2e9f7f8409be149405d81775235b2c13e20593d5854ff00.jpg",
+                "price": "$2.95",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Paldean Tauros",
+                "number": "172/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/9c/7e/54/9c7e54028670ebcb64068c3eedaf759857e4ca93f058b611d6f02e5c62947df7.jpg",
+                "price": "$1.90",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Riolu",
+                "number": "173/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/20/5d/cf/205dcf83c429ae3e0e9ba6dbe9123ab4645091aaadbc640f9f0edc49f951c0c5.jpg",
+                "price": "$7.82",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Lucario",
+                "number": "174/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/79/90/4d/79904d055a15ab122aae23409ee28990c6d2ff89f2e44ba4e04963236bd215c5.jpg",
+                "price": "$9.91",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Hawlucha",
+                "number": "175/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/ee/33/2b/ee332bd0db5d47420a537d5264a49570eb0c8bfbed709724d277fe631dff160e.jpg",
+                "price": "$6.52",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Nacli",
+                "number": "176/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/05/10/8f/05108f3bf7abeee6416fe610f8b4135f48a7ae1e907fc95b8e0e1b129ae47d74.jpg",
+                "price": "$1.82",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Naclstack",
+                "number": "177/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/b7/e1/2d/b7e12d693f822d4582ac0a1a10488dd52c60c412f3c6532a23b758dac14f0d33.jpg",
+                "price": "$2.63",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Garganacl",
+                "number": "178/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/32/e3/e8/32e3e8cc67a2cac6ca0981d87d2ac5662acf497a43036ffd26d33ccbde797d28.jpg",
+                "price": "$1.62",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Glimmet",
+                "number": "179/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/70/32/30/7032305b0a7e8c396e74915a8937f33deaa923dd525ef191f7075c8dddd9d838.jpg",
+                "price": "$1.82",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Paldean Wooper",
+                "number": "180/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/a4/52/08/a45208d667ac321c3adf4cc482810ffe1c127f3e1156017b3aa844abbaf83641.jpg",
+                "price": "$4.80",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Murkrow",
+                "number": "181/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/90/d2/8a/90d28a2fbbb5a58998f52b313f43005b4118cb2fb304ebd26ac9f5069c80e26a.jpg",
+                "price": "$2.64",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Sneasel",
+                "number": "182/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/92/55/40/9255402c7bc7b5be1f627c7a82c7b488cc29dcb4801bb2844dda7f4ce5208e8d.jpg",
+                "price": "$2.19",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Weavile",
+                "number": "183/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/77/2e/0f/772e0fa610e5ea356832cc8588b829722ab324dd84f4efb3dc5794acece3b215.jpg",
+                "price": "$2.32",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Sableye",
+                "number": "184/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/4d/81/2e/4d812e4013cbe70948fc7500c9afbdb304e2019a81ecc3c5518536681dc02e69.jpg",
+                "price": "$4.70",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pawniard",
+                "number": "185/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/10/e6/4e/10e64e27f04f14a278feb5cfe70d2221df27945d657b845b8568f53539016ba4.jpg",
+                "price": "$2.57",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Bisharp",
+                "number": "186/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d7/de/a7/d7dea7e79a9f64e8f2f91d0a808435d873d22e13c371ecd24aeb1f3049c8a0a4.jpg",
+                "price": "$1.98",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Kingambit",
+                "number": "187/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/a7/18/ef/a718efba1648c0444c34ca8771e1745e5a5669a350ec195cb5f06e2bec1c0413.jpg",
+                "price": "$2.38",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Mabosstiff",
+                "number": "188/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/2e/de/63/2ede6369dda9cef15bf063ec137dec74d526f0a3a440d702de58d6b6676a349d.jpg",
+                "price": "$1.66",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Shroodle",
+                "number": "189/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/7a/6c/f3/7a6cf3342b36d4a2cec89783c361aa5554516e00b6031865762c70ed5ae9214c.jpg",
+                "price": "$1.82",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Grafaiai",
+                "number": "190/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/13/0e/c1/130ec1b4832405f99ad76b5e01861b04217249661934ea600d1915059ebaded7.jpg",
+                "price": "$1.76",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Scizor",
+                "number": "191/091",
+                "imageUrl": "https://tcgplayer-cdn.tcgplayer.com/product/535149_in_1000x1000.jpg",
+                "price": "$7.06",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Varoom",
+                "number": "192/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d6/fb/55/d6fb55a5f8bbfd060416c70dfe548e91a57342752d87d4585333d5f497422e33.jpg",
+                "price": "$1.50",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Revavroom",
+                "number": "193/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/c7/2e/ef/c72eef8180745c1a14c89faebd378fe536ef039e657005e20166a56b11c89e82.jpg",
+                "price": "$3.00",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Noibat",
+                "number": "194/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/6f/62/66/6f6266c61c9d5ceae9876ba30f8a5f615e1f9bad5cab94dff39a8eccdc9d5d0d.jpg",
+                "price": "$3.43",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Cyclizar",
+                "number": "195/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/2b/06/1d/2b061deaab8919e0cff058dd4cc3e454a6a55987f5b97ba16bfff4f3428f03e0.jpg",
+                "price": "$1.85",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pidgey",
+                "number": "196/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/0e/ea/16/0eea16f99ca19b04fdf7b81b247b02c335bef1f2290eeeb7111273d9d553efb4.jpg",
+                "price": "$6.93",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pidgeotto",
+                "number": "197/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/39/cb/c9/39cbc994d1fea62b19dcf778289c9c56e3486f6042bf32ae1e74b46efe5bfa3a.jpg",
+                "price": "$6.32",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Jigglypuff",
+                "number": "198/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/1f/4f/5f/1f4f5f54f51fa95492bb958ff08000fbc529f43ae1b475b3995b5b21668fb114.jpg",
+                "price": "$4.51",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Doduo",
+                "number": "199/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/1f/31/fd/1f31fd1eca3e939f3d583577ba3c7cadf2db7128019aa44f33e814dcd91ab19a.jpg",
+                "price": "$3.50",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Dodrio",
+                "number": "200/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/a2/f9/e9/a2f9e926e0ce4e6d1de7f306131061b3e8bec15c39c84a1de5e47be0aaa5f049.jpg",
+                "price": "$2.86",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Ditto",
+                "number": "201/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/f6/c7/ee/f6c7ee504b650d95dd9b5e996065e26bed7524e8a0e00b0e94cc053b59a0659f.jpg",
+                "price": "$18.76",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Snorlax",
+                "number": "202/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/65/06/02/650602dca8edee388619c64a8faf3ef57a04568c52bc85f1a9a2e378ab64ea7a.jpg",
+                "price": "$19.92",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Wingull",
+                "number": "203/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d6/a1/8f/d6a18ffaccb80bd7a1dc5da5fb92b36017cac79611e4e786d3fa442bbc21de33.jpg",
+                "price": "$2.64",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pelipper",
+                "number": "204/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/25/64/af/2564afbf65f26368207b275143e0c76e6833242b1c6e90834b186f1418dc7860.jpg",
+                "price": "$1.87",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Skwovet",
+                "number": "205/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/c7/df/01/c7df014052eb761b1fb5cec519a24c76311de5707c028a0ad7e9feb25218d10b.jpg",
+                "price": "$1.94",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Greedent",
+                "number": "206/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/be/6e/48/be6e4808a985d180d3111fef4bce0edb3e24fb18657a75e3d10d0563b1307fae.jpg",
+                "price": "$1.43",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Lechonk",
+                "number": "207/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/21/77/73/21777380f90268bbbbaea16304a3ad89db1b2b2398f13b63fce57384fa6f2c2d.jpg",
+                "price": "$4.43",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Oinkologne",
+                "number": "208/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/52/1a/85/521a85ff8f7314b00bc810dc5208e91f8613b226b00446c573bba009606718f4.jpg",
+                "price": "$2.61",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Tandemaus",
+                "number": "209/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d2/d8/b6/d2d8b665553950dd19a065751b814f3c2949fbcf16d5852062fc4face185f9c1.jpg",
+                "price": "$9.16",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Maushold",
+                "number": "210/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/8c/15/3e/8c153efe145cdc802b8fb8539b71ed269dbc11855cada95e3082af78a430b617.jpg",
+                "price": "$9.10",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Flamigo",
+                "number": "211/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/7a/37/eb/7a37eb68559c3ed153d219e8c5812acefab9ff7a5248886ffc9f6e6be9ab1c79.jpg",
+                "price": "$2.50",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Forretress ex",
+                "number": "212/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d8/28/3e/d8283e02a38d72ceba8ef728a234ec4cbd152c80a19659438a1fc1067c0a0f13.jpg",
+                "price": "$0.81",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Toedscruel ex",
+                "number": "213/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/ef/2d/9f/ef2d9ff1840441e4b90ce1f81dec83e82c93bc3fa70af65afacc7b201f8baf74.jpg",
+                "price": "$1.53",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Espathra ex",
+                "number": "214/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/aa/bc/b0/aabcb055314a6b428cb2808344ad7dbfee97650fcf070b7b0dcee46455693053.jpg",
+                "price": "$0.80",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Alakazam ex",
+                "number": "215/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/2b/97/5c/2b975ce1feda07f403896027146d2b0c09e92d9d5bd9abd612ee6a08a4e696f6.jpg",
+                "price": "$2.61",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Mew ex",
+                "number": "216/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/53/d3/75/53d3752ee47bb06e847953777ff68c0f76f52ca0c51c28fe56e0147fba67e428.jpg",
+                "price": "$16.11",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Gardevoir ex",
+                "number": "217/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/74/87/b1/7487b180f4c3e03ca5cb610f6415e088696b4600e7ad5cdda253ac6c2b71611c.jpg",
+                "price": "$5.75",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Glimmora ex",
+                "number": "218/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/5f/ba/2b/5fba2b52b26c5b968bc944af5424cab8296783826ebfc14bd30fa384b4f6467d.jpg",
+                "price": "$0.87",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Paldean Clodsire ex",
+                "number": "219/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/6b/92/5c/6b925cacbd7a8295e87750fce533033ddd68f8e5572f4f649812847e892c8c70.jpg",
+                "price": "$1.33",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Noivern ex",
+                "number": "220/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/98/52/34/985234f26536cdb349ab77e0baaabdf0208c5c3bdbb590920f0081c90be6531f.jpg",
+                "price": "$1.19",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Pidgeot ex",
+                "number": "221/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/7f/da/3a/7fda3ac9ba9139fe38c5072de9aa27cd26a958b854bd7efcdb6feeb96bcd6383.jpg",
+                "price": "$2.81",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Wigglytuff ex",
+                "number": "222/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/d2/6e/68/d26e68608058aad6cd4185ebe061d7d8cc875bfca05b19b52aaf5b478fc0cae0.jpg",
+                "price": "$1.13",
+                "obtained": false,
+                "set": "Paldean Fates"
+            },
+            {
+                "name": "Squawkabilly ex",
+                "number": "223/091",
+                "imageUrl": "https://static.tcgcollector.com/content/images/26/c1/9f/26c19fbf6916ba92818d7d7ade2efdfde079e93fa927a2edb1404b5568c457e1.jpg",
+                "price": "$1.00",
+                "obtained": false,
+                "set": "Paldean Fates"
+            }
+        ];
+
+        // This array will hold the current state of cards (including 'obtained' from Firestore)
+        let currentPokemonCards = [];
+
+        // Function to save a card's obtained status to Firestore
+        async function saveCardStatusToFirestore(card) {
+            if (!userId) {
+                console.error("User not authenticated. Cannot save card status.");
+                return;
+            }
+            // Use card.number as the document ID for each card's status
+            const cardDocRef = doc(db, `artifacts/${appId}/users/${userId}/cardStatuses`, card.number);
+            try {
+                // Set only the 'obtained' status for this specific card document
+                await setDoc(cardDocRef, { obtained: card.obtained }, { merge: true });
+                console.log(`Estado de la carta ${card.name} (${card.number}) guardado.`);
+            } catch (e) {
+                console.error("Error al guardar el estado de la carta: ", e);
+            }
+        }
+
+        // Function to load card statuses from Firestore
+        async function loadCardStatusesFromFirestore() {
+            if (!userId) {
+                console.warn("User not authenticated, loading default card statuses.");
+                return {}; // Return empty object if no user
+            }
+            try {
+                const querySnapshot = await getDocs(collection(db, `artifacts/${appId}/users/${userId}/cardStatuses`));
+                const fetchedStatuses = {};
+                querySnapshot.forEach((doc) => {
+                    fetchedStatuses[doc.id] = doc.data().obtained;
+                });
+                console.log("Estados de cartas cargados de Firestore:", fetchedStatuses);
+                return fetchedStatuses;
+            } catch (e) {
+                console.error("Error al cargar los estados de las cartas: ", e);
+                return {}; // Return empty object on error
+            }
+        }
+
+        // Function to merge Firestore statuses with master list
+        async function mergeStatusesAndRender() {
+            document.getElementById('loading-indicator').classList.remove('hidden'); // Show loading
+            const fetchedStatuses = await loadCardStatusesFromFirestore();
+
+            currentPokemonCards = masterPokemonCards.map(masterCard => {
+                const obtainedStatus = fetchedStatuses[masterCard.number];
+                // If a status exists in Firestore, use it; otherwise, use the default from masterCard
+                return { ...masterCard, obtained: obtainedStatus !== undefined ? obtainedStatus : masterCard.obtained };
+            });
+
+            renderCards(); // Render cards with merged statuses
+            document.getElementById('loading-indicator').classList.add('hidden'); // Hide loading
+        }
+
+
+        // Function to create a card element
+        function createCardElement(card, originalIndex) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card-item';
+
+            const img = document.createElement('img');
+            img.src = card.imageUrl;
+            img.alt = card.name;
+            img.className = 'card-image';
+            img.onerror = function() {
+                this.onerror=null;
+                this.src='https://placehold.co/200x280/cccccc/333333?text=No+Image';
+            };
+            cardDiv.appendChild(img);
+
+            const detailsDiv = document.createElement('div');
+            detailsDiv.className = 'card-details';
+
+            const name = document.createElement('h2');
+            name.textContent = card.name;
+            name.className = 'card-name';
+            detailsDiv.appendChild(name);
+
+            const number = document.createElement('p');
+            number.textContent = `Número: ${card.number}`;
+            number.className = 'card-info';
+            detailsDiv.appendChild(number);
+
+            if (card.set) {
+                const set = document.createElement('span');
+                set.textContent = `Set: ${card.set}`;
+                set.className = 'card-set';
+                detailsDiv.appendChild(set);
+            }
+
+            const price = document.createElement('span');
+            price.textContent = `Precio: ${card.price}`;
+            price.className = 'card-price';
+            detailsDiv.appendChild(price);
+
+            const obtained = document.createElement('span');
+            obtained.textContent = card.obtained ? 'Obtenida' : 'No Obtenida';
+            obtained.className = `card-obtained ${card.obtained ? 'true' : 'false'}`;
+            obtained.dataset.originalIndex = originalIndex; // Store the original index for direct update
+            obtained.addEventListener('click', async (event) => {
+                const idx = parseInt(event.target.dataset.originalIndex);
+                if (idx !== undefined && currentPokemonCards[idx]) {
+                    currentPokemonCards[idx].obtained = !currentPokemonCards[idx].obtained; // Toggle status
+                    await saveCardStatusToFirestore(currentPokemonCards[idx]); // Save to Firestore
+                    renderCards(); // Re-render to update UI and total price
+                }
+            });
+            detailsDiv.appendChild(obtained);
+
+            cardDiv.appendChild(detailsDiv);
+            return cardDiv;
+        }
+
+        // Function to render filtered cards and update total price
+        function renderCards() {
+            const cardDisplay = document.getElementById('card-display');
+            cardDisplay.innerHTML = ''; // Clear existing cards
+
+            const nameFilter = document.getElementById('name-filter').value.toLowerCase();
+            const numberFilter = document.getElementById('number-filter').value.toLowerCase();
+            const obtainedFilter = document.getElementById('obtained-filter').value;
+            const setFilter = document.getElementById('set-filter').value;
+
+            let currentTotalPrice = 0; // Initialize total price
+
+            const filteredCards = currentPokemonCards.filter(card => {
+                // Filter by Name
+                const matchesName = card.name.toLowerCase().includes(nameFilter);
+
+                // Filter by Number
+                const matchesNumber = card.number.toLowerCase().includes(numberFilter);
+
+                // Filter by Obtained status
+                const matchesObtained = (
+                    obtainedFilter === 'all' ||
+                    (obtainedFilter === 'true' && card.obtained === true) ||
+                    (obtainedFilter === 'false' && card.obtained === false)
+                );
+
+                // Filter by Set
+                const matchesSet = (
+                    setFilter === 'all' ||
+                    (card.set && card.set.toLowerCase() === setFilter.toLowerCase())
+                );
+
+                return matchesName && matchesNumber && matchesObtained && matchesSet;
+            });
+
+            if (filteredCards.length === 0) {
+                cardDisplay.innerHTML = '<p class="text-center text-gray-600 text-lg">No se encontraron cartas con los filtros seleccionados.</p>';
+            } else {
+                filteredCards.forEach((card) => {
+                    // Find the original index of the card in the `currentPokemonCards` array
+                    const originalIndex = currentPokemonCards.indexOf(card);
+                    cardDisplay.appendChild(createCardElement(card, originalIndex));
+
+                    // Add price to total for all *displayed* cards
+                    const priceValue = parseFloat(card.price.replace('$', ''));
+                    if (!isNaN(priceValue)) { // Ensure price is a valid number
+                        currentTotalPrice += priceValue;
+                    }
+                });
+            }
+
+            // Update the total price display
+            const totalPriceDisplay = document.getElementById('total-price-display');
+            if (totalPriceDisplay) {
+                totalPriceDisplay.textContent = `Total: $${currentTotalPrice.toFixed(2)}`;
+            }
+        }
+
+        // Firebase Authentication State Listener
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid; // Set userId if authenticated
+                console.log("Firebase Authenticated. User ID:", userId);
+            } else {
+                // Sign in anonymously if no user is found
+                try {
+                    const anonymousUser = await signInAnonymously(auth);
+                    userId = anonymousUser.user.uid;
+                    console.log("Signed in anonymously. User ID:", userId);
+                } catch (error) {
+                    console.error("Error signing in anonymously:", error);
+                    // Fallback if anonymous sign-in fails
+                    userId = crypto.randomUUID(); // Generate a random ID for local use
+                    console.warn("Could not sign in anonymously. Using a random UUID for local data.", userId);
+                }
+            }
+            isAuthReady = true; // Mark auth as ready
+            // Now that auth is ready, merge statuses and render cards
+            mergeStatusesAndRender();
+        });
+
+
+        // Add event listeners to filters (they will trigger renderCards once auth is ready)
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('name-filter').addEventListener('input', renderCards);
+            document.getElementById('number-filter').addEventListener('input', renderCards);
+            document.getElementById('obtained-filter').addEventListener('change', renderCards);
+            document.getElementById('set-filter').addEventListener('change', renderCards);
+            // Initial render is now handled by onAuthStateChanged via mergeStatusesAndRender
+        });
+    </script>
+</body>
+</html>
