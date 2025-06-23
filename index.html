@@ -1263,13 +1263,13 @@
                 console.error("User not authenticated. Cannot save card status.");
                 return;
             }
-            // Use card.number as the document ID for each card's status
-            // The path structure must match Firebase security rules.
-            const cardDocRef = doc(db, `artifacts/${appId}/users/${userId}/cardStatuses`, card.number);
+            // Encode the card.number to handle slashes in Firestore document IDs
+            const encodedCardNumber = encodeURIComponent(card.number);
+            const cardDocRef = doc(db, `artifacts/${appId}/users/${userId}/cardStatuses`, encodedCardNumber);
             try {
                 // Set only the 'obtained' status for this specific card document
                 await setDoc(cardDocRef, { obtained: card.obtained }, { merge: true });
-                console.log(`DEBUG: Estado de la carta ${card.name} (${card.number}) guardado.`);
+                console.log(`DEBUG: Estado de la carta ${card.name} (${card.number}) guardado (Encoded: ${encodedCardNumber}).`);
             } catch (e) {
                 console.error("DEBUG: Error al guardar el estado de la carta: ", e);
             }
@@ -1282,11 +1282,12 @@
                 return {}; // Return empty object if no user
             }
             try {
-                // The path structure must match Firebase security rules.
                 const querySnapshot = await getDocs(collection(db, `artifacts/${appId}/users/${userId}/cardStatuses`));
                 const fetchedStatuses = {};
                 querySnapshot.forEach((doc) => {
-                    fetchedStatuses[doc.id] = doc.data().obtained;
+                    // Decode the document ID back to its original card.number format
+                    const decodedCardNumber = decodeURIComponent(doc.id);
+                    fetchedStatuses[decodedCardNumber] = doc.data().obtained;
                 });
                 console.log("DEBUG: Estados de cartas cargados de Firestore:", fetchedStatuses);
                 return fetchedStatuses;
