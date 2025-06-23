@@ -160,9 +160,15 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Firebase configuration (provided by the Canvas environment)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+const firebaseConfig = {
+  apiKey: "AIzaSyBy9NGyELQsS-t59D93EM4geWBwBr56O08",
+  authDomain: "pokesnixx.firebaseapp.com",
+  projectId: "pokesnixx",
+  storageBucket: "pokesnixx.firebasestorage.app",
+  messagingSenderId: "226747705445",
+  appId: "1:226747705445:web:9c9d5d858c52a9c8e13e8c",
+  measurementId: "G-EX07BC6EX4"
+};
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
