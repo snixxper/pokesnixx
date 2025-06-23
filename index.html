@@ -1,3 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Cartas Pokémon</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Responsive grid */
+            gap: 16px;
+        }
+        .card-item {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        .card-image {
+            width: 100%;
+            height: auto;
+            object-fit: contain; /* Ensure the image fits within its container */
+            border-bottom: 1px solid #e5e7eb; /* Light border below image */
+        }
+        .card-details {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .card-name {
+            font-weight: 600;
+            font-size: 1.125rem; /* text-lg */
+            margin-bottom: 8px;
+            color: #1f2937; /* Dark gray text */
+        }
+        .card-info {
+            font-size: 0.875rem; /* text-sm */
+            color: #6b7280; /* Medium gray text */
+            margin-bottom: 4px;
+        }
+        .card-price {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #10b981; /* Green for price */
+            background-color: #d1fae5; /* Light green background */
+            padding: 4px 8px;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+        .card-set { /* Style for the set name */
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #4f46e5; /* Indigo for set name */
+            background-color: #e0e7ff; /* Light indigo background */
+            padding: 4px 8px;
+            border-radius: 8px;
+            margin-top: 4px;
+        }
+        .card-obtained {
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-top: 4px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            color: #ffffff;
+            cursor: pointer; /* Indicate it's clickable */
+            transition: background-color 0.2s ease-in-out;
+        }
+        .card-obtained.true {
+            background-color: #34d399; /* Green if obtained */
+        }
+        .card-obtained.false {
+            background-color: #ef4444; /* Red if not obtained */
+        }
+        /* Style for loading indicator */
+        #loading-indicator {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+    <!-- Header Section -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 rounded-xl shadow-lg mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center">
+        <div class="text-center sm:text-left mb-2 sm:mb-0">
+            <h1 class="text-3xl sm:text-4xl font-bold">Pokesnixx</h1>
+            <p class="text-lg sm:text-xl opacity-90">Explora y visualiza tus cartas favoritas</p>
+        </div>
+        <!-- New element for total price display -->
+        <div id="total-price-display" class="bg-white text-blue-800 p-3 rounded-lg text-xl font-bold shadow-md mt-4 sm:mt-0">
+            Total: $0.00
+        </div>
+    </header>
+
+    <!-- Filter Section -->
+    <section class="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-lg mb-8">
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <div class="w-full sm:w-auto">
+                <label for="name-filter" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                <input type="text" id="name-filter" placeholder="Nombre de la carta"
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div class="w-full sm:w-40">
+                <label for="number-filter" class="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                <input type="text" id="number-filter" placeholder="Número de la carta"
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div class="w-full sm:w-auto">
+                <label for="obtained-filter" class="block text-sm font-medium text-gray-700 mb-1">Obtenida/No Obtenida</label>
+                <select id="obtained-filter"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="all">Todas</option>
+                    <option value="true">Obtenidas</option>
+                    <option value="false">No Obtenidas</option>
+                </select>
+            </div>
+            <div class="w-full sm:w-auto">
+                <label for="set-filter" class="block text-sm font-medium text-gray-700 mb-1">Set</label>
+                <select id="set-filter"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="all">Todos los Sets</option>
+                    <option value="Paldean Fates">Paldean Fates</option>
+                    <!-- Add more sets here dynamically if needed -->
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto">
+        <div id="loading-indicator" class="hidden">Cargando cartas...</div>
+        <div id="card-display" class="card-grid">
+            <!-- Pokémon cards will be loaded here by JavaScript -->
+        </div>
+    </main>
+
     <script type="module">
         // Import necessary Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -5,15 +160,14 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ¡IMPORTANTE! Reemplaza esto con tu firebaseConfig real de la consola de Firebase.
-        // Ejemplo:
         const firebaseConfig = {
-  apiKey: "AIzaSyBy9NGyELQsS-t59D93EM4geWBwBr56O08",
-  authDomain: "pokesnixx.firebaseapp.com",
-  projectId: "pokesnixx",
-  storageBucket: "pokesnixx.firebasestorage.app",
-  messagingSenderId: "226747705445",
-  appId: "1:226747705445:web:9c9d5d858c52a9c8e13e8c",
-  measurementId: "G-EX07BC6EX4"
+          apiKey: "AIzaSyBy9NGyELQsS-t59D93EM4geWBwBr56O08",
+          authDomain: "pokesnixx.firebaseapp.com",
+          projectId: "pokesnixx",
+          storageBucket: "pokesnixx.firebasestorage.app",
+          messagingSenderId: "226747705445",
+          appId: "1:226747705445:web:9c9d5d858c52a9c8e13e8c",
+          measurementId: "G-EX07BC6EX4"
         };
 
         // Usa el projectId como app_id para la ruta de Firestore
@@ -1132,7 +1286,12 @@
 
         // Function to merge Firestore statuses with master list
         async function mergeStatusesAndRender() {
-            document.getElementById('loading-indicator').classList.remove('hidden'); // Show loading
+            // Mostrar un indicador de carga
+            const loadingIndicator = document.getElementById('loading-indicator');
+            if (loadingIndicator) {
+                loadingIndicator.classList.remove('hidden');
+            }
+
             const fetchedStatuses = await loadCardStatusesFromFirestore();
 
             currentPokemonCards = masterPokemonCards.map(masterCard => {
@@ -1142,7 +1301,10 @@
             });
 
             renderCards(); // Render cards with merged statuses
-            document.getElementById('loading-indicator').classList.add('hidden'); // Hide loading
+            // Ocultar el indicador de carga
+            if (loadingIndicator) {
+                loadingIndicator.classList.add('hidden');
+            }
         }
 
 
@@ -1288,10 +1450,28 @@
 
         // Add event listeners to filters (they will trigger renderCards once auth is ready)
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('name-filter').addEventListener('input', renderCards);
-            document.getElementById('number-filter').addEventListener('input', renderCards);
-            document.getElementById('obtained-filter').addEventListener('change', renderCards);
-            document.getElementById('set-filter').addEventListener('change', renderCards);
+            // Se verifica la existencia de los elementos antes de añadir event listeners
+            const nameFilterElement = document.getElementById('name-filter');
+            if (nameFilterElement) {
+                nameFilterElement.addEventListener('input', renderCards);
+            }
+
+            const numberFilterElement = document.getElementById('number-filter');
+            if (numberFilterElement) {
+                numberFilterElement.addEventListener('input', renderCards);
+            }
+
+            const obtainedFilterElement = document.getElementById('obtained-filter');
+            if (obtainedFilterElement) {
+                obtainedFilterElement.addEventListener('change', renderCards);
+            }
+
+            const setFilterElement = document.getElementById('set-filter');
+            if (setFilterElement) {
+                setFilterElement.addEventListener('change', renderCards);
+            }
             // Initial render is now handled by onAuthStateChanged via mergeStatusesAndRender
         });
     </script>
+</body>
+</html>
