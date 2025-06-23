@@ -1257,16 +1257,16 @@
             try {
                 // Set only the 'obtained' status for this specific card document
                 await setDoc(cardDocRef, { obtained: card.obtained }, { merge: true });
-                console.log(`Estado de la carta ${card.name} (${card.number}) guardado.`);
+                console.log(`DEBUG: Estado de la carta ${card.name} (${card.number}) guardado.`);
             } catch (e) {
-                console.error("Error al guardar el estado de la carta: ", e);
+                console.error("DEBUG: Error al guardar el estado de la carta: ", e);
             }
         }
 
         // Function to load card statuses from Firestore
         async function loadCardStatusesFromFirestore() {
             if (!userId) {
-                console.warn("User not authenticated, loading default card statuses.");
+                console.warn("DEBUG: User not authenticated, loading default card statuses.");
                 return {}; // Return empty object if no user
             }
             try {
@@ -1276,10 +1276,10 @@
                 querySnapshot.forEach((doc) => {
                     fetchedStatuses[doc.id] = doc.data().obtained;
                 });
-                console.log("Estados de cartas cargados de Firestore:", fetchedStatuses);
+                console.log("DEBUG: Estados de cartas cargados de Firestore:", fetchedStatuses);
                 return fetchedStatuses;
             } catch (e) {
-                console.error("Error al cargar los estados de las cartas: ", e);
+                console.error("DEBUG: Error al cargar los estados de las cartas: ", e);
                 return {}; // Return empty object on error
             }
         }
@@ -1288,22 +1288,35 @@
         async function mergeStatusesAndRender() {
             // Mostrar un indicador de carga
             const loadingIndicator = document.getElementById('loading-indicator');
-            if (loadingIndicator) {
+            if (loadingIndicator) { // Añadido verificación de nulidad
                 loadingIndicator.classList.remove('hidden');
+                console.log("DEBUG: Indicador de carga mostrado.");
+            } else {
+                console.warn("DEBUG: Elemento #loading-indicator no encontrado.");
             }
 
+            console.log("DEBUG: Iniciando carga de estados de Firestore...");
             const fetchedStatuses = await loadCardStatusesFromFirestore();
+            console.log(`DEBUG: Estados de Firestore recuperados. Cantidad: ${Object.keys(fetchedStatuses).length}`);
+
 
             currentPokemonCards = masterPokemonCards.map(masterCard => {
                 const obtainedStatus = fetchedStatuses[masterCard.number];
                 // If a status exists in Firestore, use it; otherwise, use the default from masterCard
-                return { ...masterCard, obtained: obtainedStatus !== undefined ? obtainedStatus : masterCard.obtained };
+                const cardWithStatus = { ...masterCard, obtained: obtainedStatus !== undefined ? obtainedStatus : masterCard.obtained };
+                // console.log(`DEBUG: Carta ${cardWithStatus.name} (${cardWithStatus.number}) - Obtenida: ${cardWithStatus.obtained}`); // Logging each card status can be noisy
+                return cardWithStatus;
             });
 
+            console.log(`DEBUG: masterPokemonCards.length: ${masterPokemonCards.length}`);
+            console.log(`DEBUG: currentPokemonCards.length después de fusionar: ${currentPokemonCards.length}`);
+
             renderCards(); // Render cards with merged statuses
+
             // Ocultar el indicador de carga
-            if (loadingIndicator) {
+            if (loadingIndicator) { // Añadido verificación de nulidad
                 loadingIndicator.classList.add('hidden');
+                console.log("DEBUG: Indicador de carga ocultado.");
             }
         }
 
@@ -1371,12 +1384,22 @@
             const cardDisplay = document.getElementById('card-display');
             cardDisplay.innerHTML = ''; // Clear existing cards
 
-            const nameFilter = document.getElementById('name-filter').value.toLowerCase();
-            const numberFilter = document.getElementById('number-filter').value.toLowerCase();
-            const obtainedFilter = document.getElementById('obtained-filter').value;
-            const setFilter = document.getElementById('set-filter').value;
+            const nameFilterElement = document.getElementById('name-filter');
+            const nameFilter = nameFilterElement ? nameFilterElement.value.toLowerCase() : '';
+
+            const numberFilterElement = document.getElementById('number-filter');
+            const numberFilter = numberFilterElement ? numberFilterElement.value.toLowerCase() : '';
+
+            const obtainedFilterElement = document.getElementById('obtained-filter');
+            const obtainedFilter = obtainedFilterElement ? obtainedFilterElement.value : 'all';
+
+            const setFilterElement = document.getElementById('set-filter');
+            const setFilter = setFilterElement ? setFilterElement.value : 'all';
+
 
             let currentTotalPrice = 0; // Initialize total price
+
+            console.log(`DEBUG: Aplicando filtros - Nombre: '${nameFilter}', Número: '${numberFilter}', Obtenida: '${obtainedFilter}', Set: '${setFilter}'`);
 
             const filteredCards = currentPokemonCards.filter(card => {
                 // Filter by Name
@@ -1394,11 +1417,14 @@
 
                 // Filter by Set
                 const matchesSet = (
-                    card.set && card.set.toLowerCase().includes(setFilter.toLowerCase())
+                    setFilter === 'all' ||
+                    (card.set && card.set.toLowerCase().includes(setFilter.toLowerCase()))
                 );
 
                 return matchesName && matchesNumber && matchesObtained && matchesSet;
             });
+
+            console.log(`DEBUG: Cartas filtradas: ${filteredCards.length}`);
 
             if (filteredCards.length === 0) {
                 cardDisplay.innerHTML = '<p class="text-center text-gray-600 text-lg">No se encontraron cartas con los filtros seleccionados.</p>';
@@ -1437,20 +1463,20 @@
                 } catch (error) {
                     console.error("Error signing in anonymously:", error);
                     // Fallback if anonymous sign-in fails
-                    // Consider showing a user-friendly message about data not being saved.
                     userId = crypto.randomUUID(); // Generate a random ID for local session only
                     console.warn("Could not sign in anonymously. Using a random UUID for local data. Data will not persist.", userId);
                 }
             }
             isAuthReady = true; // Mark auth as ready
+            console.log("DEBUG: Autenticación lista. userId:", userId);
             // Now that auth is ready, merge statuses and render cards
             mergeStatusesAndRender();
         });
 
 
         // Add event listeners to filters (they will trigger renderCards once auth is ready)
+        // These listeners are added safely after DOMContentLoaded, and elements are checked for existence.
         document.addEventListener('DOMContentLoaded', () => {
-            // Se verifica la existencia de los elementos antes de añadir event listeners
             const nameFilterElement = document.getElementById('name-filter');
             if (nameFilterElement) {
                 nameFilterElement.addEventListener('input', renderCards);
