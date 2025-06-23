@@ -16,7 +16,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Responsive grid */
             gap: 16px;
-            /* Añadido para depuración visual */
+            /* Added for visual debugging */
             background-color: #f9fafb; /* Lighter gray background for the grid area */
             border: 2px dashed #d1d5db; /* Dashed border to see the container */
             min-height: 400px; /* Ensure it has a minimum height */
@@ -101,11 +101,38 @@
             font-size: 1.2rem;
             color: #6b7280;
         }
-        #user-id-display { /* New style for user ID */
+        #user-info-display { /* Combined element for user ID/email and sign-in/out buttons */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 8px;
             font-size: 0.75rem;
             color: #e2e8f0;
-            margin-top: 8px;
-            word-break: break-all; /* Allow long IDs to break lines */
+        }
+        #user-info-display p {
+            word-break: break-all;
+            margin-bottom: 8px;
+        }
+        #auth-buttons button {
+            margin: 4px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+        }
+        #auth-buttons button.google {
+            background-color: #4285F4; /* Google Blue */
+            color: white;
+        }
+        #auth-buttons button.google:hover {
+            background-color: #357ae8;
+        }
+        #auth-buttons button.sign-out {
+            background-color: #f44336; /* Red */
+            color: white;
+        }
+        #auth-buttons button.sign-out:hover {
+            background-color: #d32f2f;
         }
     </style>
 </head>
@@ -115,7 +142,13 @@
         <div class="text-center sm:text-left mb-2 sm:mb-0">
             <h1 class="text-3xl sm:text-4xl font-bold">Pokesnixx</h1>
             <p class="text-lg sm:text-xl opacity-90">Explora y visualiza tus cartas favoritas</p>
-            <p id="user-id-display" class="mt-2 text-xs opacity-75"></p> <!-- Added User ID display -->
+            <div id="user-info-display">
+                <p id="user-status-text">Cargando usuario...</p>
+                <div id="auth-buttons" class="flex flex-wrap justify-center">
+                    <button id="google-sign-in-button" class="google hidden">Iniciar Sesión con Google</button>
+                    <button id="sign-out-button" class="sign-out hidden">Cerrar Sesión</button>
+                </div>
+            </div>
         </div>
         <!-- New element for total price display -->
         <div id="total-price-display" class="bg-white text-blue-800 p-3 rounded-lg text-xl font-bold shadow-md mt-4 sm:mt-0">
@@ -168,8 +201,8 @@
     <script type="module">
         // Import necessary Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ¡IMPORTANTE! Reemplaza esto con tu firebaseConfig real de la consola de Firebase.
         const firebaseConfig = {
@@ -189,8 +222,10 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        const googleProvider = new GoogleAuthProvider();
 
         let userId = null; // Will store the authenticated user ID
+        let currentUserEmail = "Cargando..."; // To display user email or ID
         let isAuthReady = false; // Flag to indicate if authentication is complete
 
         // Pokémon card data (initial master list)
@@ -1468,44 +1503,78 @@
 
         // Firebase Authentication State Listener
         onAuthStateChanged(auth, async (user) => {
-            const userIdDisplay = document.getElementById('user-id-display'); // Get the user ID display element
+            const userStatusText = document.getElementById('user-status-text');
+            const googleSignInButton = document.getElementById('google-sign-in-button');
+            const signOutButton = document.getElementById('sign-out-button');
 
             if (user) {
-                userId = user.uid; // Set userId if authenticated
+                userId = user.uid;
+                currentUserEmail = user.email || `ID anónimo: ${user.uid}`; // Display email if Google, else anonymous ID
                 console.log("Firebase Authenticated. User ID:", userId);
-                if (userIdDisplay) { // Update UI
-                    userIdDisplay.textContent = `User ID: ${userId}`;
-                }
+                if (userStatusText) userStatusText.textContent = `Conectado como: ${currentUserEmail}`;
+                if (googleSignInButton) googleSignInButton.classList.add('hidden');
+                if (signOutButton) signOutButton.classList.remove('hidden');
             } else {
-                // Sign in anonymously if no user is found
-                try {
-                    const anonymousUser = await signInAnonymously(auth);
-                    userId = anonymousUser.user.uid;
-                    console.log("Signed in anonymously. User ID:", userId);
-                    if (userIdDisplay) { // Update UI
-                        userIdDisplay.textContent = `User ID: ${userId}`;
-                    }
-                } catch (error) {
-                    console.error("Error signing in anonymously:", error);
-                    // Fallback if anonymous sign-in fails
-                    userId = crypto.randomUUID(); // Generate a random ID for local session only
-                    console.warn("Could not sign in anonymously. Using a random UUID for local data. Data will not persist.", userId);
-                    if (userIdDisplay) { // Update UI
-                        userIdDisplay.textContent = `User ID (Local): ${userId}`;
-                        userIdDisplay.classList.add('text-red-300'); // Indicate non-persistent
+                userId = null; // Clear userId if no user
+                currentUserEmail = "No conectado";
+                console.log("User not authenticated. Attempting anonymous sign-in or prompting for Google.");
+                if (userStatusText) userStatusText.textContent = `Estado: ${currentUserEmail}`;
+                if (googleSignInButton) googleSignInButton.classList.remove('hidden');
+                if (signOutButton) signOutButton.classList.add('hidden');
+
+                // Try anonymous sign-in if not already authenticated (e.g., initial load)
+                if (!auth.currentUser) {
+                     try {
+                        const anonymousUserCredential = await signInAnonymously(auth);
+                        userId = anonymousUserCredential.user.uid;
+                        currentUserEmail = `ID anónimo: ${userId}`;
+                        console.log("Signed in anonymously. User ID:", userId);
+                        if (userStatusText) userStatusText.textContent = `Conectado como: ${currentUserEmail}`;
+                    } catch (error) {
+                        console.error("Error signing in anonymously:", error);
+                        console.warn("Could not sign in anonymously. Data will not persist for this session.");
+                        if (userStatusText) {
+                            userStatusText.textContent = "No conectado (Error en autenticación)";
+                            userStatusText.classList.add('text-red-300');
+                        }
                     }
                 }
             }
-            isAuthReady = true; // Mark auth as ready
+            isAuthReady = true;
             console.log("DEBUG: Autenticación lista. userId:", userId);
-            // Now that auth is ready, merge statuses and render cards
             mergeStatusesAndRender();
         });
 
-
-        // Add event listeners to filters (they will trigger renderCards once auth is ready)
-        // These listeners are added safely after DOMContentLoaded, and elements are checked for existence.
+        // Event Listeners for Authentication Buttons
         document.addEventListener('DOMContentLoaded', () => {
+            const googleSignInButton = document.getElementById('google-sign-in-button');
+            const signOutButton = document.getElementById('sign-out-button');
+
+            if (googleSignInButton) {
+                googleSignInButton.addEventListener('click', async () => {
+                    try {
+                        await signInWithPopup(auth, googleProvider);
+                        console.log("DEBUG: Sesión iniciada con Google.");
+                        // onAuthStateChanged will handle UI update and data load
+                    } catch (error) {
+                        console.error("DEBUG: Error al iniciar sesión con Google:", error);
+                    }
+                });
+            }
+
+            if (signOutButton) {
+                signOutButton.addEventListener('click', async () => {
+                    try {
+                        await signOut(auth);
+                        console.log("DEBUG: Sesión cerrada.");
+                        // onAuthStateChanged will handle UI update and data load
+                    } catch (error) {
+                        console.error("DEBUG: Error al cerrar sesión:", error);
+                    }
+                });
+            }
+
+            // Add event listeners to filters (they will trigger renderCards once auth is ready)
             const nameFilterElement = document.getElementById('name-filter');
             if (nameFilterElement) {
                 nameFilterElement.addEventListener('input', renderCards);
@@ -1525,7 +1594,6 @@
             if (setFilterElement) {
                 setFilterElement.addEventListener('change', renderCards);
             }
-            // Initial render is now handled by onAuthStateChanged via mergeStatusesAndRender
         });
     </script>
 </body>
