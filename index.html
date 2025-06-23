@@ -16,6 +16,11 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Responsive grid */
             gap: 16px;
+            /* Añadido para depuración visual */
+            background-color: #f9fafb; /* Lighter gray background for the grid area */
+            border: 2px dashed #d1d5db; /* Dashed border to see the container */
+            min-height: 400px; /* Ensure it has a minimum height */
+            padding: 16px; /* Add some padding inside the grid */
         }
         .card-item {
             background-color: white;
@@ -96,6 +101,12 @@
             font-size: 1.2rem;
             color: #6b7280;
         }
+        #user-id-display { /* New style for user ID */
+            font-size: 0.75rem;
+            color: #e2e8f0;
+            margin-top: 8px;
+            word-break: break-all; /* Allow long IDs to break lines */
+        }
     </style>
 </head>
 <body class="p-4 sm:p-6 md:p-8">
@@ -104,6 +115,7 @@
         <div class="text-center sm:text-left mb-2 sm:mb-0">
             <h1 class="text-3xl sm:text-4xl font-bold">Pokesnixx</h1>
             <p class="text-lg sm:text-xl opacity-90">Explora y visualiza tus cartas favoritas</p>
+            <p id="user-id-display" class="mt-2 text-xs opacity-75"></p> <!-- Added User ID display -->
         </div>
         <!-- New element for total price display -->
         <div id="total-price-display" class="bg-white text-blue-800 p-3 rounded-lg text-xl font-bold shadow-md mt-4 sm:mt-0">
@@ -1288,7 +1300,7 @@
         async function mergeStatusesAndRender() {
             // Mostrar un indicador de carga
             const loadingIndicator = document.getElementById('loading-indicator');
-            if (loadingIndicator) { // Añadido verificación de nulidad
+            if (loadingIndicator) {
                 loadingIndicator.classList.remove('hidden');
                 console.log("DEBUG: Indicador de carga mostrado.");
             } else {
@@ -1314,7 +1326,7 @@
             renderCards(); // Render cards with merged statuses
 
             // Ocultar el indicador de carga
-            if (loadingIndicator) { // Añadido verificación de nulidad
+            if (loadingIndicator) {
                 loadingIndicator.classList.add('hidden');
                 console.log("DEBUG: Indicador de carga ocultado.");
             }
@@ -1333,6 +1345,7 @@
             img.onerror = function() {
                 this.onerror=null;
                 this.src='https://placehold.co/200x280/cccccc/333333?text=No+Image';
+                console.warn(`DEBUG: Fallback de imagen activado para ${card.name} (${card.number})`);
             };
             cardDiv.appendChild(img);
 
@@ -1369,6 +1382,7 @@
                 const idx = parseInt(event.target.dataset.originalIndex);
                 if (idx !== undefined && currentPokemonCards[idx]) {
                     currentPokemonCards[idx].obtained = !currentPokemonCards[idx].obtained; // Toggle status
+                    console.log(`DEBUG: Cambiando estado de ${currentPokemonCards[idx].name} a ${currentPokemonCards[idx].obtained}`);
                     await saveCardStatusToFirestore(currentPokemonCards[idx]); // Save to Firestore
                     renderCards(); // Re-render to update UI and total price
                 }
@@ -1427,13 +1441,15 @@
             console.log(`DEBUG: Cartas filtradas: ${filteredCards.length}`);
 
             if (filteredCards.length === 0) {
-                cardDisplay.innerHTML = '<p class="text-center text-gray-600 text-lg">No se encontraron cartas con los filtros seleccionados.</p>';
+                cardDisplay.innerHTML = '<p class="text-center text-gray-600 text-lg">No se encontraron cartas con los filtros seleccionadas.</p>';
             } else {
                 filteredCards.forEach((card) => {
                     // Find the original index of the card in the `currentPokemonCards` array
                     const originalIndex = currentPokemonCards.indexOf(card);
-                    cardDisplay.appendChild(createCardElement(card, originalIndex));
-
+                    const cardElement = createCardElement(card, originalIndex);
+                    cardDisplay.appendChild(cardElement);
+                    console.log(`DEBUG: Se añadió la carta ${card.name} al DOM.`); // Confirmación de añadido
+                    
                     // Add price to total for all *displayed* cards
                     const priceValue = parseFloat(card.price.replace('$', ''));
                     if (!isNaN(priceValue)) { // Ensure price is a valid number
@@ -1451,20 +1467,32 @@
 
         // Firebase Authentication State Listener
         onAuthStateChanged(auth, async (user) => {
+            const userIdDisplay = document.getElementById('user-id-display'); // Get the user ID display element
+
             if (user) {
                 userId = user.uid; // Set userId if authenticated
                 console.log("Firebase Authenticated. User ID:", userId);
+                if (userIdDisplay) { // Update UI
+                    userIdDisplay.textContent = `User ID: ${userId}`;
+                }
             } else {
                 // Sign in anonymously if no user is found
                 try {
                     const anonymousUser = await signInAnonymously(auth);
                     userId = anonymousUser.user.uid;
                     console.log("Signed in anonymously. User ID:", userId);
+                    if (userIdDisplay) { // Update UI
+                        userIdDisplay.textContent = `User ID: ${userId}`;
+                    }
                 } catch (error) {
                     console.error("Error signing in anonymously:", error);
                     // Fallback if anonymous sign-in fails
                     userId = crypto.randomUUID(); // Generate a random ID for local session only
                     console.warn("Could not sign in anonymously. Using a random UUID for local data. Data will not persist.", userId);
+                    if (userIdDisplay) { // Update UI
+                        userIdDisplay.textContent = `User ID (Local): ${userId}`;
+                        userIdDisplay.classList.add('text-red-300'); // Indicate non-persistent
+                    }
                 }
             }
             isAuthReady = true; // Mark auth as ready
