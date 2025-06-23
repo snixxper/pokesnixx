@@ -61,7 +61,6 @@
             background-color: transparent; /* Fondo ahora transparente */
             color: #fff;
             padding: 8px 16px; /* Reducido el padding para letras más pequeñas */
-            /* Quitado el border-radius para que sea rectangular */
             font-weight: 600;
             font-size: 0.875rem; /* Tamaño de fuente más pequeño (text-sm) */
             transition: background-color 0.3s ease, transform 0.2s ease;
@@ -73,18 +72,48 @@
             background-color: #555; /* Mantiene el color al pasar el mouse para visibilidad */
             transform: translateY(-2px); /* Pequeño levantamiento al pasar el mouse */
         }
+
+        /* Estilos para el Message Box */
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #222;
+            color: #f0f0f0;
+            padding: 20px;
+            border: 1px solid #444;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none; /* Oculto por defecto */
+            text-align: center;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            max-width: 300px;
+        }
+        .message-box button {
+            background-color: #555;
+            color: #fff;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background-color 0.2s ease;
+        }
+        .message-box button:hover {
+            background-color: #777;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4 relative">
     <!-- Botón de autenticación en la esquina superior derecha, ahora con posición fija -->
-    <div class="fixed top-4 right-4 z-10"> <!-- z-10 para asegurar que esté por encima de otros elementos -->
+    <div class="fixed top-4 right-4 z-10">
         <button id="authButton" class="auth-button">NOOB</button>
     </div>
 
-    <header class="text-center mb-24 w-full"> <!-- Contenedor relativo para posicionar el botón (ya no es necesario para el botón fijo) -->
-        <!-- The main title "THE COLLECTOR" with normal letter spacing -->
+    <header class="text-center mb-24 w-full">
         <h1 class="text-5xl font-bold mb-4 text-white title-font tracking-normal">THE COLLECTOR</h1>
-        <!-- The main subtitle, smaller, less wide, and with tighter letter spacing -->
         <p class="text-xs text-gray-400 subtitle-font max-w-lg mx-auto tracking-tight">
             SNIXX<br>
             LIMA, PERÚ
@@ -92,55 +121,170 @@
     </header>
 
     <main class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full" id="main-options-container">
-        <!-- Option 1: Twice Image (no rounded borders, no background color) -->
+        <!-- Opción 1: Twice Image -->
         <div class="option-card shadow-lg overflow-hidden cursor-pointer">
-            <a href="#" class="block">
-                <!-- Image is now square -->
+            <a href="#" class="block auth-protected" data-target-page="twice.html">
                 <img src="https://mir-s3-cdn-cf.behance.net/project_modules/fs/8c543c227745583.68469f3977483.png" alt="Twice" class="w-full h-48 object-cover">
-                <!-- Adjust padding for this section: px-6 for horizontal, pt-2 for top, pb-6 for bottom -->
                 <div class="px-6 pt-2 pb-6">
-                    <!-- Option 1 title: TWICE - aligned left and slightly smaller (text-lg) -->
                     <h2 class="text-lg font-semibold mb-2 text-white subtitle-font text-left">TWICE</h2>
-                    <!-- Description removed -->
                 </div>
             </a>
         </div>
 
-        <!-- Option 2: Pokemon Image (no rounded borders, no background color) -->
+        <!-- Opción 2: Pokemon Image -->
         <div class="option-card shadow-lg overflow-hidden cursor-pointer">
-            <!-- Link to pokemon.html -->
-            <a href="pokesnixx/pokemon.html" class="block">
-                <!-- Image is now square -->
+            <a href="#" class="block auth-protected" data-target-page="pokemon.html">
                 <img src="https://mir-s3-cdn-cf.behance.net/project_modules/fs/89674e177545993.64d857e53653a.png" alt="Pokemon" class="w-full h-48 object-cover">
-                <!-- Adjust padding for this section: px-6 for horizontal, pt-2 for top, pb-6 for bottom -->
                 <div class="px-6 pt-2 pb-6">
-                    <!-- Option 2 title: POKEMON - aligned left and slightly smaller (text-lg) -->
                     <h2 class="text-lg font-semibold mb-2 text-white subtitle-font text-left">POKEMON</h2>
-                    <!-- Description removed -->
                 </div>
             </a>
         </div>
 
-        <!-- Option 3: Vinilos Image (no rounded borders, no background color) -->
+        <!-- Opción 3: Vinilos Image -->
         <div class="option-card shadow-lg overflow-hidden cursor-pointer">
-            <a href="#" class="block">
-                <!-- Image is now square -->
+            <a href="#" class="block auth-protected" data-target-page="vinilos.html">
                 <img src="https://mir-s3-cdn-cf.behance.net/project_modules/max_1200_webp/d2c6fe217922403.6798e1ff4aa03.jpg" alt="Vinilos" class="w-full h-48 object-cover">
-                <!-- Adjust padding for this section: px-6 for horizontal, pt-2 for top, pb-6 for bottom -->
                 <div class="px-6 pt-2 pb-6">
-                    <!-- Option 3 title: VINILOS - aligned left and slightly smaller (text-lg) -->
                     <h2 class="text-lg font-semibold mb-2 text-white subtitle-font text-left">VINILOS</h2>
-                    <!-- Description removed -->
                 </div>
             </a>
         </div>
     </main>
 
-    <script>
+    <!-- Message Box HTML -->
+    <div id="messageBox" class="message-box">
+        <p id="messageBoxContent"></p>
+        <button id="messageBoxClose">Entendido</button>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Firestore is imported but not explicitly used for data in this example.
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ==========================================================
+        // === PASO IMPORTANTE: REEMPLAZA ESTO CON TU CONFIGURACIÓN DE FIREBASE REAL ===
+        // ==========================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBy9NGyELQsS-t59D93EM4geWBwBr56O08",
+  authDomain: "pokesnixx.firebaseapp.com",
+  projectId: "pokesnixx",
+  storageBucket: "pokesnixx.firebasestorage.app",
+  messagingSenderId: "226747705445",
+  appId: "1:226747705445:web:9c9d5d858c52a9c8e13e8c",
+  measurementId: "G-EX07BC6EX4"
+};
+
+        // NOTA: Las variables __app_id y __initial_auth_token son para el entorno de Canvas.
+        // Si estás ejecutando esto en tu propio servidor/local, las líneas de abajo
+        // que usan estas variables DEBERÍAN SER ELIMINADAS o AJUSTADAS
+        // para tu lógica de autenticación real (por ejemplo, con email/password, Google Sign-In, etc.).
+        // Para este ejemplo, las he dejado como estaba para la compatibilidad con el entorno Canvas,
+        // pero se recomienda usar tus propios métodos de autenticación en producción.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // ==========================================================
+        // ==========================================================
+
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app); // Firestore instance, though not used for data persistence here
+
+        let currentUser = null; // To store the current authenticated user
+
+        // --- Message Box Functions ---
+        function showMessageBox(message) {
+            const messageBox = document.getElementById('messageBox');
+            const messageBoxContent = document.getElementById('messageBoxContent');
+            messageBoxContent.textContent = message;
+            messageBox.style.display = 'block';
+        }
+
+        function hideMessageBox() {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.style.display = 'none';
+        }
+        document.getElementById('messageBoxClose').addEventListener('click', hideMessageBox);
+
+
+        // --- Authentication Functions ---
+        async function handleAuth() {
+            if (currentUser) {
+                // User is logged in, attempt to log out
+                try {
+                    await signOut(auth);
+                    showMessageBox('¡Has cerrado sesión correctamente!');
+                } catch (error) {
+                    console.error('Error al cerrar sesión:', error);
+                    showMessageBox('Error al cerrar sesión. Intenta de nuevo.');
+                }
+            } else {
+                // User is logged out, attempt to log in
+                // CONSIDERACIÓN: Aquí puedes reemplazar signInAnonymously o signInWithCustomToken
+                // por métodos de autenticación más robustos como signInWithEmailAndPassword,
+                // signInWithPopup (para Google, Facebook, etc.), según tu configuración de Firebase.
+                try {
+                    if (initialAuthToken) {
+                        // Use custom token if provided (for Canvas environment)
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        showMessageBox('¡Has iniciado sesión con token personalizado (Canvas)!');
+                    } else {
+                        // Fallback to anonymous sign-in if no custom token
+                        await signInAnonymously(auth);
+                        showMessageBox('¡Has iniciado sesión como anónimo!');
+                    }
+                } catch (error) {
+                    console.error('Error al iniciar sesión:', error);
+                    showMessageBox('Error al iniciar sesión. Intenta de nuevo.');
+                }
+            }
+        }
+
+        // --- Auth State Change Listener ---
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            const authButton = document.getElementById('authButton');
+            if (user) {
+                authButton.textContent = 'Cerrar Sesión';
+                console.log('Usuario logueado:', user.uid);
+            } else {
+                authButton.textContent = 'NOOB';
+                console.log('Usuario no logueado.');
+            }
+        });
+
+        // --- Card Click Handler ---
+        function handleProtectedLinkClick(event) {
+            event.preventDefault(); // Prevent default link navigation
+
+            if (currentUser) {
+                // User is logged in, proceed to the target page
+                const targetPage = event.currentTarget.dataset.targetPage;
+                if (targetPage) {
+                    window.location.href = targetPage;
+                } else {
+                    console.warn('No target page defined for this link.');
+                }
+            } else {
+                // User is not logged in, show message
+                showMessageBox('Necesitas iniciar sesión para acceder a esta página.');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('main-options-container');
             const optionCards = container.querySelectorAll('.option-card');
+            const authButton = document.getElementById('authButton');
 
+            // Add authentication logic to the button
+            authButton.addEventListener('click', handleAuth);
+
+            // Add mouseover/mouseout for shrink effect
             optionCards.forEach(card => {
                 card.addEventListener('mouseover', () => {
                     optionCards.forEach(otherCard => {
@@ -157,10 +301,10 @@
                 });
             });
 
-            // Script para el botón de autenticación
-            const authButton = document.getElementById('authButton');
-            authButton.addEventListener('click', () => {
-                alert('¡Botón de autenticación clicado! Aquí iría la lógica de inicio de sesión/registro.');
+            // Add click event for protected links
+            const protectedLinks = document.querySelectorAll('.auth-protected');
+            protectedLinks.forEach(link => {
+                link.addEventListener('click', handleProtectedLinkClick);
             });
         });
     </script>
