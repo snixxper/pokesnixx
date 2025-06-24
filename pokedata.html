@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor Avanzado de Colecciones Pokémon TCG con Firebase</title>
+    <title>snixx - Gestor Avanzado de Colecciones Pokémon TCG </title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -52,26 +52,6 @@
 
         .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 40; }
         .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; }
-
-        /* Estilo minimalista para filtros */
-        .custom-filter {
-            background-color: transparent;
-            border: none;
-            border-bottom: 2px solid #4b5563; /* gray-600 */
-            border-radius: 0;
-            padding-left: 0.25rem;
-            padding-right: 0.25rem;
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-        }
-        .custom-filter:focus {
-            outline: none;
-            box-shadow: none;
-            border-color: #3b82f6; /* blue-500 */
-        }
     </style>
 </head>
 <body class="bg-black text-gray-300">
@@ -82,37 +62,38 @@
             <p class="text-gray-400 mt-2 font-geist-mono">Busca cartas y organízalas en tus propias colecciones.</p>
         </header>
 
-        <!-- CAMBIO 2: Se quita bg-white y shadow-lg -->
-        <div class="p-6 mb-8">
-            <div class="mb-6 text-center border-b border-gray-700 pb-6">
-                 <!-- CAMBIO 1: Botón sin bordes redondos y con fondo blanco -->
-                 <button id="manageCollectionsBtn" class="mt-2 bg-white hover:bg-gray-200 text-gray-800 py-2 px-4 font-geist-mono font-bold uppercase" disabled>Gestionar Mis Colecciones</button>
+        <!-- CAMBIO 1: Panel de filtros sin bordes redondeados -->
+        <div class="bg-white p-6 shadow-lg mb-8">
+            <div class="mb-6 text-center border-b border-gray-200 pb-6">
+                 <!-- CAMBIO 2: Botón de gestión rediseñado -->
+                 <button id="manageCollectionsBtn" class="mt-2 bg-black hover:bg-gray-800 text-white py-2 px-4 font-geist-mono font-bold uppercase" disabled>Gestionar Mis Colecciones</button>
                  <p id="auth-status" class="text-sm text-red-500 font-semibold mt-4 font-geist-mono">Por favor, inicia sesión para gestionar tus colecciones.</p>
             </div>
 
             <!-- Contenedor de Filtros con los nuevos campos -->
             <div id="filtersContainer" class="grid grid-cols-1 md:grid-cols-4 gap-8 items-end">
                 <div>
-                    <!-- CAMBIO 3: Etiqueta en negrita y color ajustado -->
-                    <label for="ownedFilter" class="block text-sm font-bold text-gray-300 font-geist-mono">Posesión</label>
-                    <!-- CAMBIO 4: Texto del filtro en blanco -->
-                    <select id="ownedFilter" class="mt-1 w-full custom-filter font-geist-mono text-white" disabled>
+                    <!-- CAMBIO 3: Etiquetas de filtros más grandes -->
+                    <label for="ownedFilter" class="block text-base font-bold text-gray-700 font-geist-mono">Posesión</label>
+                    <!-- CAMBIO 4: Texto de filtros más pequeño -->
+                    <select id="ownedFilter" class="mt-1 w-full p-3 bg-gray-100 border border-gray-200 text-gray-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-geist-mono text-sm" disabled>
                         <option value="all">Todas</option>
                         <option value="owned">Obtenidas</option>
                         <option value="unowned">No Obtenidas</option>
                     </select>
                 </div>
                  <div>
-                    <label for="collectionFilter" class="block text-sm font-bold text-gray-300 font-geist-mono">Colección</label>
-                    <select id="collectionFilter" class="mt-1 w-full custom-filter font-geist-mono text-white" disabled> <option value="all">Todas</option> </select>
+                    <label for="collectionFilter" class="block text-base font-bold text-gray-700 font-geist-mono">Colección</label>
+                    <select id="collectionFilter" class="mt-1 w-full p-3 bg-gray-100 border border-gray-200 text-gray-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-geist-mono text-sm" disabled> <option value="all">Todas</option> </select>
                 </div>
                 <div>
-                    <label for="pokemonName" class="block text-sm font-bold text-gray-300 font-geist-mono">Nombre</label>
-                    <input type="text" id="pokemonName" class="mt-1 w-full custom-filter font-geist-mono text-white" placeholder="Ej: Pikachu" disabled>
+                    <label for="pokemonName" class="block text-base font-bold text-gray-700 font-geist-mono">Nombre</label>
+                    <!-- CAMBIO 5: Placeholder actualizado -->
+                    <input type="text" id="pokemonName" class="mt-1 w-full p-3 bg-gray-100 border border-gray-200 text-gray-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-geist-mono text-sm" placeholder="Ej: Chikorita" disabled>
                 </div>
                 <div>
-                    <label for="rarityFilter" class="block text-sm font-bold text-gray-300 font-geist-mono">Rareza</label>
-                    <select id="rarityFilter" class="mt-1 w-full custom-filter font-geist-mono text-white" disabled> <option value="">Cualquiera</option> </select>
+                    <label for="rarityFilter" class="block text-base font-bold text-gray-700 font-geist-mono">Rareza</label>
+                    <select id="rarityFilter" class="mt-1 w-full p-3 bg-gray-100 border border-gray-200 text-gray-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-geist-mono text-sm" disabled> <option value="">Cualquiera</option> </select>
                 </div>
             </div>
         </div>
@@ -552,7 +533,7 @@
             const assignmentsRef = doc(db, 'users', currentUser.uid, 'cards', 'assignments');
             await setDoc(assignmentsRef, { [cardId]: selectedCollections }, { merge: true });
             dom.assignCardModal.classList.add('hidden');
-        });
+        }
         function openCardAssignmentModal(cardId) {
             dom.saveCardAssignmentBtn.dataset.cardId = cardId;
             dom.assignCollectionsList.innerHTML = '';
