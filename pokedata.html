@@ -19,10 +19,9 @@
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .card-container { position: relative; transition: transform 0.3s ease-in-out; }
+        .card-container { display: flex; flex-direction: column; background-color: #fff; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); overflow: hidden; transition: transform 0.3s ease-in-out; }
         .card-container:hover { transform: scale(1.05); }
-        .card-image { transition: box-shadow 0.3s ease-in-out; }
-        .card-container:hover .card-image { box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); }
+        .image-wrapper { position: relative; }
         
         .in-any-collection .card-image { box-shadow: 0 0 15px 5px rgba(59, 130, 246, 0.7); border: 2px solid #3B82F6; }
         .is-owned .card-image { box-shadow: 0 0 15px 5px rgba(234, 179, 8, 0.7); border: 2px solid #ca8a04; }
@@ -57,7 +56,7 @@
                  <button id="manageCollectionsBtn" class="mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg" disabled>Gestionar Mis Colecciones</button>
             </div>
 
-            <!-- Contenedor de Filtros con Posesión primero -->
+            <!-- Contenedor de Filtros con los nuevos campos -->
             <div id="filtersContainer" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div>
                     <label for="ownedFilter" class="block text-sm font-medium text-gray-700">Posesión</label>
@@ -76,8 +75,8 @@
                     <input type="text" id="pokemonName" class="mt-1 w-full p-3 border border-gray-300 rounded-lg" placeholder="Ej: Pikachu" disabled>
                 </div>
                 <div>
-                    <label for="pokemonType" class="block text-sm font-medium text-gray-700">Tipo</label>
-                    <select id="pokemonType" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="">Cualquiera</option> </select>
+                    <label for="rarityFilter" class="block text-sm font-medium text-gray-700">Rareza</label>
+                    <select id="rarityFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="">Cualquiera</option> </select>
                 </div>
             </div>
         </div>
@@ -140,7 +139,7 @@
             authStatus: document.getElementById('auth-status'),
             manageCollectionsBtn: document.getElementById('manageCollectionsBtn'),
             pokemonName: document.getElementById('pokemonName'),
-            pokemonType: document.getElementById('pokemonType'),
+            rarityFilter: document.getElementById('rarityFilter'), // Reemplaza pokemonType
             collectionFilter: document.getElementById('collectionFilter'),
             ownedFilter: document.getElementById('ownedFilter'),
             results: document.getElementById('results'),
@@ -246,15 +245,15 @@
             const ownedFilterValue = dom.ownedFilter.value;
             const collectionFilterValue = dom.collectionFilter.value;
             const nameQuery = dom.pokemonName.value.trim();
-            const typeQuery = dom.pokemonType.value;
+            const rarityQuery = dom.rarityFilter.value; // Reemplaza typeQuery
             const API_BASE_URL = 'https://api.pokemontcg.io/v2';
             let queryParts = [];
 
             // 1. Añadir filtros de texto de la API
             if (nameQuery) queryParts.push(`name:${nameQuery}*`);
-            if (typeQuery) queryParts.push(`types:${typeQuery}`);
+            if (rarityQuery) queryParts.push(`rarity:"${rarityQuery}"`); // Usa el filtro de rareza
             
-            // 2. Determinar el conjunto de IDs basado en los filtros de usuario (Colección y Posesión)
+            // 2. Determinar el conjunto de IDs basado en los filtros de usuario
             let idFilterSet = null;
 
             if (collectionFilterValue !== 'all') {
@@ -266,15 +265,13 @@
 
             if (ownedFilterValue === 'owned') {
                 if (idFilterSet !== null) {
-                    // Intersección: solo las cartas que están en la colección Y son obtenidas
                     idFilterSet = new Set([...idFilterSet].filter(id => userOwnedCards.has(id)));
                 } else {
-                    // Solo filtro de obtenidas
                     idFilterSet = new Set(userOwnedCards);
                 }
             }
             
-            // 3. Añadir el filtro de IDs a la consulta de la API si es necesario
+            // 3. Añadir el filtro de IDs a la consulta
             if (idFilterSet !== null) {
                 if (idFilterSet.size === 0) {
                     dom.results.innerHTML = '';
@@ -286,7 +283,7 @@
                 queryParts.push(idQuery);
             }
             
-            // 4. Construir URL final y ejecutar la búsqueda
+            // 4. Construir URL final
             let url;
             if (queryParts.length === 0) {
                 url = `${API_BASE_URL}/cards?orderBy=name&pageSize=100`;
@@ -298,8 +295,8 @@
             fetchAndDisplayCards(url);
         }
 
-        // Añadir listeners unificados para todos los filtros que requieren una nueva búsqueda en la API
-        [dom.pokemonName, dom.pokemonType, dom.ownedFilter, dom.collectionFilter].forEach(el => {
+        // Añadir listeners a los filtros
+        [dom.pokemonName, dom.rarityFilter, dom.ownedFilter, dom.collectionFilter].forEach(el => {
             const eventType = el.tagName === 'INPUT' ? 'input' : 'change';
             const handler = el === dom.pokemonName ? debouncedTriggerSearch : triggerSearch;
             el.addEventListener(eventType, handler);
@@ -321,7 +318,6 @@
 
             allCards.forEach(cardEl => {
                 let isVisible = true;
-                // El único filtro que se aplica visualmente después de la búsqueda es "No Obtenidas"
                 if (ownedFilterValue === 'unowned' && userOwnedCards.has(cardEl.dataset.cardId)) {
                     isVisible = false;
                 }
@@ -336,9 +332,12 @@
                 cardContainer.className = 'card-container';
                 cardContainer.dataset.cardId = card.id;
 
+                const imageWrapper = document.createElement('div');
+                imageWrapper.className = 'image-wrapper';
+
                 const cardImage = document.createElement('img');
                 cardImage.src = card.images.small;
-                cardImage.className = 'rounded-lg shadow-md card-image w-full';
+                cardImage.className = 'card-image w-full';
 
                 const manageBtn = document.createElement('button');
                 manageBtn.className = 'card-btn manage-card-btn';
@@ -349,13 +348,29 @@
                 ownedBtn.className = 'card-btn owned-toggle-btn';
                 ownedBtn.onclick = () => toggleOwnedStatus(card.id);
                 
-                cardContainer.append(ownedBtn, manageBtn, cardImage);
+                imageWrapper.append(ownedBtn, manageBtn, cardImage);
+
+                const cardInfo = document.createElement('div');
+                cardInfo.className = 'p-2 text-center border-t border-gray-200';
+
+                const setEl = document.createElement('p');
+                setEl.className = 'text-xs font-semibold text-gray-700 truncate';
+                setEl.textContent = card.set.name;
+
+                const numberEl = document.createElement('p');
+                numberEl.className = 'text-xs text-gray-500';
+                numberEl.textContent = `Nº ${card.number}`;
+
+                cardInfo.append(setEl, numberEl);
+                
+                cardContainer.append(imageWrapper, cardInfo);
                 dom.results.append(cardContainer);
             });
             updateDisplayedCardsState();
         }
 
         function updateDisplayedCardsState() {
+            applyVisualFilters();
             const allCards = dom.results.querySelectorAll('.card-container');
             allCards.forEach(cardEl => {
                 const cardId = cardEl.dataset.cardId;
@@ -369,7 +384,6 @@
                 ownedBtn.classList.toggle('is-owned', isOwned);
                 ownedBtn.innerHTML = isOwned ? '&#10003;' : '';
             });
-            applyVisualFilters();
         }
         
         function enableApp() {
@@ -402,22 +416,23 @@
             if (!apiKey) { return; }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/types`, { headers: { 'X-Api-Key': apiKey } });
+                // Cambiado de /types a /rarities
+                const response = await fetch(`${API_BASE_URL}/rarities`, { headers: { 'X-Api-Key': apiKey } });
                 if(!response.ok) return;
                 const data = await response.json();
                 
-                const typeSelect = document.getElementById('pokemonType');
-                while (typeSelect.options.length > 1) {
-                    typeSelect.remove(1);
+                const raritySelect = document.getElementById('rarityFilter');
+                while (raritySelect.options.length > 1) {
+                    raritySelect.remove(1);
                 }
-                data.data.forEach(type => {
+                data.data.forEach(rarity => {
                     const option = document.createElement('option');
-                    option.value = type;
-                    option.textContent = type;
-                    typeSelect.appendChild(option);
+                    option.value = rarity;
+                    option.textContent = rarity;
+                    raritySelect.appendChild(option);
                 });
             } catch(error) {
-                console.error("Error al cargar los tipos de Pokémon:", error);
+                console.error("Error al cargar las rarezas:", error);
             }
         }
                 
