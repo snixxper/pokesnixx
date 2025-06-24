@@ -11,7 +11,12 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Se añade Bebas Neue a la importación -->
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FUENTE: Geist Mono -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist-font@1.3.0/dist/mono.css" />
+
 
     <!-- Estilos personalizados -->
     <style>
@@ -19,6 +24,14 @@
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
+        .font-geist-mono {
+            font-family: 'Geist Mono', monospace;
+        }
+
+        .font-bebas-neue {
+            font-family: 'Bebas Neue', sans-serif;
+        }
+
         .card-container { display: flex; flex-direction: column; background-color: #fff; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); overflow: hidden; transition: transform 0.3s ease-in-out; }
         .card-container:hover { transform: scale(1.05); }
         .image-wrapper { position: relative; }
@@ -41,12 +54,14 @@
         .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-black text-gray-300">
 
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Gestor de Colecciones Pokémon</h1>
-            <p class="text-gray-600 mt-2">Busca cartas y organízalas en tus propias colecciones.</p>
+        <header class="text-center mb-8 bg-gray-950 p-8 rounded-lg shadow-lg">
+            <!-- Título principal con la fuente Bebas Neue -->
+            <h1 class="text-5xl font-bold mb-4 text-white tracking-normal font-bebas-neue">Gestor Pokemon</h1>
+            <!-- Subtítulo con Geist Mono -->
+            <p class="text-gray-400 mt-2 font-geist-mono">Busca cartas y organízalas en tus propias colecciones.</p>
         </header>
 
         <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
@@ -81,17 +96,17 @@
             </div>
         </div>
 
-        <div id="status" class="text-center my-8"><div id="loader" class="loader mx-auto hidden"></div><p id="message" class="text-gray-600 text-lg"></p></div>
+        <div id="status" class="text-center my-8"><div id="loader" class="loader mx-auto hidden"></div><p id="message" class="text-gray-400 text-lg"></p></div>
         <main id="results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6"></main>
     </div>
 
     <!-- Modales (sin cambios) -->
     <div id="manageCollectionsModal" class="modal-backdrop hidden">
         <div class="modal-content bg-white p-6 rounded-lg shadow-xl w-11/12 md:w-1/3">
-            <h3 class="text-xl font-bold mb-4">Gestionar Mis Colecciones</h3>
+            <h3 class="text-xl font-bold mb-4 text-gray-800">Gestionar Mis Colecciones</h3>
             <div id="collectionsList" class="mb-4 max-h-60 overflow-y-auto"></div>
             <div class="flex gap-2">
-                <input type="text" id="newCollectionName" placeholder="Nombre de la nueva colección" class="flex-grow p-2 border rounded-lg">
+                <input type="text" id="newCollectionName" placeholder="Nombre de la nueva colección" class="flex-grow p-2 border rounded-lg text-gray-800">
                 <button id="addCollectionBtn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600">Añadir</button>
             </div>
             <button id="closeManageCollectionsModal" class="mt-4 w-full bg-gray-500 text-white p-2 rounded-lg hover:bg-gray-600">Cerrar</button>
@@ -99,7 +114,7 @@
     </div>
     <div id="assignCardModal" class="modal-backdrop hidden">
          <div class="modal-content bg-white p-6 rounded-lg shadow-xl w-11/12 md:w-1/3">
-            <h3 class="text-xl font-bold mb-4">Asignar Carta a...</h3>
+            <h3 class="text-xl font-bold mb-4 text-gray-800">Asignar Carta a...</h3>
             <div id="assignCollectionsList" class="mb-4 max-h-60 overflow-y-auto"></div>
             <div class="flex gap-4">
                 <button id="saveCardAssignmentBtn" class="flex-grow bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600">Guardar</button>
@@ -139,7 +154,7 @@
             authStatus: document.getElementById('auth-status'),
             manageCollectionsBtn: document.getElementById('manageCollectionsBtn'),
             pokemonName: document.getElementById('pokemonName'),
-            rarityFilter: document.getElementById('rarityFilter'), // Reemplaza pokemonType
+            rarityFilter: document.getElementById('rarityFilter'),
             collectionFilter: document.getElementById('collectionFilter'),
             ownedFilter: document.getElementById('ownedFilter'),
             results: document.getElementById('results'),
@@ -245,15 +260,13 @@
             const ownedFilterValue = dom.ownedFilter.value;
             const collectionFilterValue = dom.collectionFilter.value;
             const nameQuery = dom.pokemonName.value.trim();
-            const rarityQuery = dom.rarityFilter.value; // Reemplaza typeQuery
+            const rarityQuery = dom.rarityFilter.value;
             const API_BASE_URL = 'https://api.pokemontcg.io/v2';
             let queryParts = [];
 
-            // 1. Añadir filtros de texto de la API
             if (nameQuery) queryParts.push(`name:${nameQuery}*`);
-            if (rarityQuery) queryParts.push(`rarity:"${rarityQuery}"`); // Usa el filtro de rareza
+            if (rarityQuery) queryParts.push(`rarity:"${rarityQuery}"`);
             
-            // 2. Determinar el conjunto de IDs basado en los filtros de usuario
             let idFilterSet = null;
 
             if (collectionFilterValue !== 'all') {
@@ -271,7 +284,6 @@
                 }
             }
             
-            // 3. Añadir el filtro de IDs a la consulta
             if (idFilterSet !== null) {
                 if (idFilterSet.size === 0) {
                     dom.results.innerHTML = '';
@@ -283,7 +295,6 @@
                 queryParts.push(idQuery);
             }
             
-            // 4. Construir URL final
             let url;
             if (queryParts.length === 0) {
                 url = `${API_BASE_URL}/cards?orderBy=name&pageSize=100`;
@@ -295,7 +306,6 @@
             fetchAndDisplayCards(url);
         }
 
-        // Añadir listeners a los filtros
         [dom.pokemonName, dom.rarityFilter, dom.ownedFilter, dom.collectionFilter].forEach(el => {
             const eventType = el.tagName === 'INPUT' ? 'input' : 'change';
             const handler = el === dom.pokemonName ? debouncedTriggerSearch : triggerSearch;
@@ -416,7 +426,6 @@
             if (!apiKey) { return; }
 
             try {
-                // Cambiado de /types a /rarities
                 const response = await fetch(`${API_BASE_URL}/rarities`, { headers: { 'X-Api-Key': apiKey } });
                 if(!response.ok) return;
                 const data = await response.json();
