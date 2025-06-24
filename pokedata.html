@@ -250,41 +250,43 @@
             const API_BASE_URL = 'https://api.pokemontcg.io/v2';
             let queryParts = [];
 
-            // Filtros de texto (siempre se aplican)
+            // 1. Añadir filtros de texto de la API
             if (nameQuery) queryParts.push(`name:${nameQuery}*`);
             if (typeQuery) queryParts.push(`types:${typeQuery}`);
             
-            // Lógica para filtros basados en IDs
-            let idSet = null;
-
-            if (ownedFilterValue === 'owned') {
-                idSet = new Set(userOwnedCards);
-            }
+            // 2. Determinar el conjunto de IDs basado en los filtros de usuario (Colección y Posesión)
+            let idFilterSet = null;
 
             if (collectionFilterValue !== 'all') {
                 const cardIdsInCollection = Object.keys(cardAssignments).filter(cardId =>
                     cardAssignments[cardId].includes(collectionFilterValue)
                 );
-                
-                if (idSet) { // Si ya había un filtro de "obtenidas", hacemos la intersección
-                    idSet = new Set([...idSet].filter(id => cardIdsInCollection.includes(id)));
-                } else { // Si no, usamos este como filtro principal de IDs
-                    idSet = new Set(cardIdsInCollection);
-                }
+                idFilterSet = new Set(cardIdsInCollection);
             }
 
-            // Si después de la lógica de filtros de ID nos quedamos con un conjunto...
-            if (idSet !== null) {
-                if (idSet.size === 0) {
+            if (ownedFilterValue === 'owned') {
+                if (idFilterSet !== null) {
+                    // Intersección: solo las cartas que están en la colección Y son obtenidas
+                    idFilterSet = new Set([...idFilterSet].filter(id => userOwnedCards.has(id)));
+                } else {
+                    // Solo filtro de obtenidas
+                    idFilterSet = new Set(userOwnedCards);
+                }
+            }
+            
+            // 3. Añadir el filtro de IDs a la consulta de la API si es necesario
+            if (idFilterSet !== null) {
+                if (idFilterSet.size === 0) {
                     dom.results.innerHTML = '';
-                    dom.message.textContent = 'No hay cartas que cumplan los criterios de posesión/colección.';
+                    dom.message.textContent = 'No hay cartas que cumplan los criterios de posesión y/o colección.';
                     dom.loader.classList.add('hidden');
                     return;
                 }
-                const idQuery = `(${[...idSet].map(id => `id:${id}`).join(' OR ')})`;
+                const idQuery = `(${[...idFilterSet].map(id => `id:${id}`).join(' OR ')})`;
                 queryParts.push(idQuery);
             }
             
+            // 4. Construir URL final y ejecutar la búsqueda
             let url;
             if (queryParts.length === 0) {
                 url = `${API_BASE_URL}/cards?orderBy=name&pageSize=100`;
@@ -296,16 +298,12 @@
             fetchAndDisplayCards(url);
         }
 
-        // Añadir listeners de búsqueda
-        ['input', 'change'].forEach(eventType => {
-            dom.pokemonName.addEventListener(eventType, debouncedTriggerSearch);
-            dom.pokemonType.addEventListener(eventType, triggerSearch);
-            dom.ownedFilter.addEventListener(eventType, triggerSearch);
-            dom.collectionFilter.addEventListener(eventType, triggerSearch);
+        // Añadir listeners unificados para todos los filtros que requieren una nueva búsqueda en la API
+        [dom.pokemonName, dom.pokemonType, dom.ownedFilter, dom.collectionFilter].forEach(el => {
+            const eventType = el.tagName === 'INPUT' ? 'input' : 'change';
+            const handler = el === dom.pokemonName ? debouncedTriggerSearch : triggerSearch;
+            el.addEventListener(eventType, handler);
         });
-
-        // Este listener ahora solo se usa para el caso "No Obtenidas"
-        dom.ownedFilter.addEventListener('change', applyClientSideFilters);
         
         async function toggleOwnedStatus(cardId) {
             if (!currentUser) return;
@@ -317,12 +315,13 @@
             }
         }
         
-        function applyClientSideFilters() {
+        function applyVisualFilters() {
             const ownedFilterValue = dom.ownedFilter.value;
             const allCards = dom.results.querySelectorAll('.card-container');
 
             allCards.forEach(cardEl => {
                 let isVisible = true;
+                // El único filtro que se aplica visualmente después de la búsqueda es "No Obtenidas"
                 if (ownedFilterValue === 'unowned' && userOwnedCards.has(cardEl.dataset.cardId)) {
                     isVisible = false;
                 }
@@ -357,11 +356,9 @@
         }
 
         function updateDisplayedCardsState() {
-            applyClientSideFilters(); // Aplicar filtros visuales después de actualizar el estado
             const allCards = dom.results.querySelectorAll('.card-container');
             allCards.forEach(cardEl => {
                 const cardId = cardEl.dataset.cardId;
-
                 const isInAny = cardAssignments[cardId] && cardAssignments[cardId].length > 0;
                 cardEl.classList.toggle('in-any-collection', isInAny);
                 cardEl.querySelector('.manage-card-btn').classList.toggle('in-any-collection', isInAny);
@@ -372,6 +369,7 @@
                 ownedBtn.classList.toggle('is-owned', isOwned);
                 ownedBtn.innerHTML = isOwned ? '&#10003;' : '';
             });
+            applyVisualFilters();
         }
         
         function enableApp() {
