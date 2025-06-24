@@ -196,8 +196,6 @@
                 const wasEmpty = userOwnedCards.size === 0;
                 userOwnedCards = docSnap.exists() ? new Set(docSnap.data().ids || []) : new Set();
                 
-                // Si la lista de obtenidas estaba vacía y ahora tiene cartas, y estamos en el filtro "obtenidas",
-                // refrescamos la búsqueda para mostrar las cartas.
                 if (wasEmpty && userOwnedCards.size > 0 && dom.ownedFilter.value === 'owned') {
                     triggerSearch();
                 }
@@ -304,9 +302,7 @@
                 const isInCollection = (collectionFilterValue === 'all' || cardColls.includes(collectionFilterValue));
                 
                 let isVisible = isInCollection;
-
-                // El filtro de posesión para "obtenidas" se maneja a nivel de API.
-                // Aquí solo manejamos el caso "no obtenidas" de forma visual.
+                
                 if (ownedFilterValue === 'unowned' && userOwnedCards.has(cardId)) {
                     isVisible = false;
                 }
@@ -365,7 +361,7 @@
                     el.disabled = false;
                 }
             });
-            dom.ownedFilter.value = 'all';
+            dom.ownedFilter.value = 'owned'; // <-- CAMBIO REALIZADO AQUÍ
             loadDropdownFilters();
             triggerSearch();
         }
