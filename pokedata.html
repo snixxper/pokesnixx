@@ -57,8 +57,16 @@
                  <button id="manageCollectionsBtn" class="mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg" disabled>Gestionar Mis Colecciones</button>
             </div>
 
-            <!-- Contenedor de Filtros -->
+            <!-- Contenedor de Filtros con Posesión primero -->
             <div id="filtersContainer" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
+                    <label for="ownedFilter" class="block text-sm font-medium text-gray-700">Posesión</label>
+                    <select id="ownedFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled>
+                        <option value="all">Todas</option>
+                        <option value="owned">Obtenidas</option>
+                        <option value="unowned">No Obtenidas</option>
+                    </select>
+                </div>
                 <div>
                     <label for="pokemonName" class="block text-sm font-medium text-gray-700">Nombre</label>
                     <input type="text" id="pokemonName" class="mt-1 w-full p-3 border border-gray-300 rounded-lg" placeholder="Ej: Pikachu" disabled>
@@ -70,14 +78,6 @@
                 <div>
                     <label for="collectionFilter" class="block text-sm font-medium text-gray-700">Colección</label>
                     <select id="collectionFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="all">Todas</option> </select>
-                </div>
-                <div>
-                    <label for="ownedFilter" class="block text-sm font-medium text-gray-700">Posesión</label>
-                    <select id="ownedFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled>
-                        <option value="all">Todas</option>
-                        <option value="owned">Obtenidas</option>
-                        <option value="unowned">No Obtenidas</option>
-                    </select>
                 </div>
             </div>
         </div>
@@ -193,7 +193,14 @@
 
             const ownedRef = doc(db, 'users', currentUser.uid, 'cards', 'owned');
             unsubscribes.push(onSnapshot(ownedRef, (docSnap) => {
+                const wasEmpty = userOwnedCards.size === 0;
                 userOwnedCards = docSnap.exists() ? new Set(docSnap.data().ids || []) : new Set();
+                
+                // Si la lista de obtenidas estaba vacía y ahora tiene cartas, y estamos en el filtro "obtenidas",
+                // refrescamos la búsqueda para mostrar las cartas.
+                if (wasEmpty && userOwnedCards.size > 0 && dom.ownedFilter.value === 'owned') {
+                    triggerSearch();
+                }
                 updateDisplayedCardsState();
             }));
         }
@@ -223,7 +230,7 @@
                 if (data.data && data.data.length > 0) {
                     displayCards(data.data);
                 } else {
-                    dom.message.textContent = 'No se encontraron cartas.';
+                    dom.message.textContent = 'No se encontraron cartas que coincidan con los criterios.';
                 }
             } catch (error) {
                 console.error('Error durante la búsqueda:', error);
@@ -232,14 +239,33 @@
             }
         }
 
+        const debouncedTriggerSearch = () => {
+             clearTimeout(searchDebounceTimeout);
+             searchDebounceTimeout = setTimeout(triggerSearch, 500);
+        }
+        
         function triggerSearch() {
-            let queryParts = [];
-            if (dom.pokemonName.value) queryParts.push(`name:${dom.pokemonName.value.trim()}*`);
-            if (dom.pokemonType.value) queryParts.push(`types:${dom.pokemonType.value}`);
-
+            const ownedFilterValue = dom.ownedFilter.value;
+            const nameQuery = dom.pokemonName.value.trim();
+            const typeQuery = dom.pokemonType.value;
             const API_BASE_URL = 'https://api.pokemontcg.io/v2';
-            let url;
+            let queryParts = [];
 
+            if (nameQuery) queryParts.push(`name:${nameQuery}*`);
+            if (typeQuery) queryParts.push(`types:${typeQuery}`);
+            
+            if (ownedFilterValue === 'owned') {
+                if (userOwnedCards.size === 0) {
+                    dom.results.innerHTML = '';
+                    dom.message.textContent = 'No tienes ninguna carta marcada como "Obtenida".';
+                    dom.loader.classList.add('hidden');
+                    return;
+                }
+                const idQuery = `(${Array.from(userOwnedCards).map(id => `id:${id}`).join(' OR ')})`;
+                queryParts.push(idQuery);
+            }
+
+            let url;
             if (queryParts.length === 0) {
                 url = `${API_BASE_URL}/cards?orderBy=name&pageSize=100`;
             } else {
@@ -250,12 +276,9 @@
             fetchAndDisplayCards(url);
         }
 
-        dom.pokemonName.addEventListener('input', () => {
-            clearTimeout(searchDebounceTimeout);
-            searchDebounceTimeout = setTimeout(triggerSearch, 500);
-        });
-
+        dom.pokemonName.addEventListener('input', debouncedTriggerSearch);
         dom.pokemonType.addEventListener('change', triggerSearch);
+        dom.ownedFilter.addEventListener('change', triggerSearch);
         
         async function toggleOwnedStatus(cardId) {
             if (!currentUser) return;
@@ -268,7 +291,6 @@
         }
         
         dom.collectionFilter.addEventListener('change', applyAllFilters);
-        dom.ownedFilter.addEventListener('change', applyAllFilters);
 
         function applyAllFilters() {
             const collectionFilterValue = dom.collectionFilter.value;
@@ -281,15 +303,14 @@
                 const cardColls = cardAssignments[cardId] || [];
                 const isInCollection = (collectionFilterValue === 'all' || cardColls.includes(collectionFilterValue));
                 
-                const isOwned = userOwnedCards.has(cardId);
-                let hasOwnedStatus = true;
-                if (ownedFilterValue === 'owned' && !isOwned) {
-                    hasOwnedStatus = false;
-                } else if (ownedFilterValue === 'unowned' && isOwned) {
-                    hasOwnedStatus = false;
+                let isVisible = isInCollection;
+
+                // El filtro de posesión para "obtenidas" se maneja a nivel de API.
+                // Aquí solo manejamos el caso "no obtenidas" de forma visual.
+                if (ownedFilterValue === 'unowned' && userOwnedCards.has(cardId)) {
+                    isVisible = false;
                 }
 
-                const isVisible = isInCollection && hasOwnedStatus;
                 cardEl.classList.toggle('hidden', !isVisible);
             });
         }
@@ -344,7 +365,7 @@
                     el.disabled = false;
                 }
             });
-            dom.ownedFilter.value = 'all'; // CAMBIO: Mostrar "Todas" por defecto para que el usuario vea cartas al instante.
+            dom.ownedFilter.value = 'all';
             loadDropdownFilters();
             triggerSearch();
         }
