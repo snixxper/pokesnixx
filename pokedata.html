@@ -67,6 +67,10 @@
                         <option value="unowned">No Obtenidas</option>
                     </select>
                 </div>
+                 <div>
+                    <label for="collectionFilter" class="block text-sm font-medium text-gray-700">Colección</label>
+                    <select id="collectionFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="all">Todas</option> </select>
+                </div>
                 <div>
                     <label for="pokemonName" class="block text-sm font-medium text-gray-700">Nombre</label>
                     <input type="text" id="pokemonName" class="mt-1 w-full p-3 border border-gray-300 rounded-lg" placeholder="Ej: Pikachu" disabled>
@@ -74,10 +78,6 @@
                 <div>
                     <label for="pokemonType" class="block text-sm font-medium text-gray-700">Tipo</label>
                     <select id="pokemonType" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="">Cualquiera</option> </select>
-                </div>
-                <div>
-                    <label for="collectionFilter" class="block text-sm font-medium text-gray-700">Colección</label>
-                    <select id="collectionFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="all">Todas</option> </select>
                 </div>
             </div>
         </div>
@@ -196,7 +196,7 @@
                 const wasEmpty = userOwnedCards.size === 0;
                 userOwnedCards = docSnap.exists() ? new Set(docSnap.data().ids || []) : new Set();
                 
-                if (wasEmpty && userOwnedCards.size > 0 && dom.ownedFilter.value === 'owned') {
+                if (wasEmpty && userOwnedCards.size > 0 && (dom.ownedFilter.value === 'owned' || dom.collectionFilter.value !== 'all')) {
                     triggerSearch();
                 }
                 updateDisplayedCardsState();
@@ -244,25 +244,47 @@
         
         function triggerSearch() {
             const ownedFilterValue = dom.ownedFilter.value;
+            const collectionFilterValue = dom.collectionFilter.value;
             const nameQuery = dom.pokemonName.value.trim();
             const typeQuery = dom.pokemonType.value;
             const API_BASE_URL = 'https://api.pokemontcg.io/v2';
             let queryParts = [];
 
+            // Filtros de texto (siempre se aplican)
             if (nameQuery) queryParts.push(`name:${nameQuery}*`);
             if (typeQuery) queryParts.push(`types:${typeQuery}`);
             
+            // Lógica para filtros basados en IDs
+            let idSet = null;
+
             if (ownedFilterValue === 'owned') {
-                if (userOwnedCards.size === 0) {
+                idSet = new Set(userOwnedCards);
+            }
+
+            if (collectionFilterValue !== 'all') {
+                const cardIdsInCollection = Object.keys(cardAssignments).filter(cardId =>
+                    cardAssignments[cardId].includes(collectionFilterValue)
+                );
+                
+                if (idSet) { // Si ya había un filtro de "obtenidas", hacemos la intersección
+                    idSet = new Set([...idSet].filter(id => cardIdsInCollection.includes(id)));
+                } else { // Si no, usamos este como filtro principal de IDs
+                    idSet = new Set(cardIdsInCollection);
+                }
+            }
+
+            // Si después de la lógica de filtros de ID nos quedamos con un conjunto...
+            if (idSet !== null) {
+                if (idSet.size === 0) {
                     dom.results.innerHTML = '';
-                    dom.message.textContent = 'No tienes ninguna carta marcada como "Obtenida".';
+                    dom.message.textContent = 'No hay cartas que cumplan los criterios de posesión/colección.';
                     dom.loader.classList.add('hidden');
                     return;
                 }
-                const idQuery = `(${Array.from(userOwnedCards).map(id => `id:${id}`).join(' OR ')})`;
+                const idQuery = `(${[...idSet].map(id => `id:${id}`).join(' OR ')})`;
                 queryParts.push(idQuery);
             }
-
+            
             let url;
             if (queryParts.length === 0) {
                 url = `${API_BASE_URL}/cards?orderBy=name&pageSize=100`;
@@ -274,9 +296,16 @@
             fetchAndDisplayCards(url);
         }
 
-        dom.pokemonName.addEventListener('input', debouncedTriggerSearch);
-        dom.pokemonType.addEventListener('change', triggerSearch);
-        dom.ownedFilter.addEventListener('change', triggerSearch);
+        // Añadir listeners de búsqueda
+        ['input', 'change'].forEach(eventType => {
+            dom.pokemonName.addEventListener(eventType, debouncedTriggerSearch);
+            dom.pokemonType.addEventListener(eventType, triggerSearch);
+            dom.ownedFilter.addEventListener(eventType, triggerSearch);
+            dom.collectionFilter.addEventListener(eventType, triggerSearch);
+        });
+
+        // Este listener ahora solo se usa para el caso "No Obtenidas"
+        dom.ownedFilter.addEventListener('change', applyClientSideFilters);
         
         async function toggleOwnedStatus(cardId) {
             if (!currentUser) return;
@@ -288,25 +317,15 @@
             }
         }
         
-        dom.collectionFilter.addEventListener('change', applyAllFilters);
-
-        function applyAllFilters() {
-            const collectionFilterValue = dom.collectionFilter.value;
+        function applyClientSideFilters() {
             const ownedFilterValue = dom.ownedFilter.value;
             const allCards = dom.results.querySelectorAll('.card-container');
 
             allCards.forEach(cardEl => {
-                const cardId = cardEl.dataset.cardId;
-                
-                const cardColls = cardAssignments[cardId] || [];
-                const isInCollection = (collectionFilterValue === 'all' || cardColls.includes(collectionFilterValue));
-                
-                let isVisible = isInCollection;
-                
-                if (ownedFilterValue === 'unowned' && userOwnedCards.has(cardId)) {
+                let isVisible = true;
+                if (ownedFilterValue === 'unowned' && userOwnedCards.has(cardEl.dataset.cardId)) {
                     isVisible = false;
                 }
-
                 cardEl.classList.toggle('hidden', !isVisible);
             });
         }
@@ -338,6 +357,7 @@
         }
 
         function updateDisplayedCardsState() {
+            applyClientSideFilters(); // Aplicar filtros visuales después de actualizar el estado
             const allCards = dom.results.querySelectorAll('.card-container');
             allCards.forEach(cardEl => {
                 const cardId = cardEl.dataset.cardId;
@@ -352,7 +372,6 @@
                 ownedBtn.classList.toggle('is-owned', isOwned);
                 ownedBtn.innerHTML = isOwned ? '&#10003;' : '';
             });
-            applyAllFilters();
         }
         
         function enableApp() {
@@ -361,7 +380,7 @@
                     el.disabled = false;
                 }
             });
-            dom.ownedFilter.value = 'owned'; // <-- CAMBIO REALIZADO AQUÍ
+            dom.ownedFilter.value = 'all';
             loadDropdownFilters();
             triggerSearch();
         }
