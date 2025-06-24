@@ -28,7 +28,7 @@
         }
 
         .option-card:hover {
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            box_shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
             /* Aplicar la animación "bob" */
             animation-name: hvr-bob;
             animation-duration: 1.5s; /* Duración de la animación: Aumentada para hacerla más lenta */
@@ -167,6 +167,12 @@
         // ==========================================================
         // === TU CONFIGURACIÓN DE FIREBASE REAL (INSERTADA DIRECTAMENTE) ===
         // ==========================================================
+        // NOTA IMPORTANTE: Si sigues recibiendo el error 'auth/admin-restricted-operation' o 'auth/api-key-not-valid',
+        // VERIFICA RIGUROSAMENTE los siguientes puntos en la CONSOLA DE FIREBASE:
+        // 1. Que esta `firebaseConfig` sea EXACTAMENTE igual a la que obtienes de tu proyecto.
+        // 2. Que el proveedor de 'Google' esté HABILITADO en 'Authentication' -> 'Sign-in method'.
+        // 3. Que los 'Dominios autorizados' en la configuración de Google Auth incluyan el dominio desde donde
+        //    estás ejecutando tu web (ej. 'localhost' o el dominio de tu servidor web).
         const firebaseConfig = {
             apiKey: "AIzaSyBy9NGyELQsS-t59D93EM4geWBwBr56O08",
             authDomain: "pokesnixx.firebaseapp.com",
@@ -234,6 +240,8 @@
                         errorMessage = 'Error de autenticación: Operación restringida. Asegúrate de que Google Sign-In está habilitado en tu consola de Firebase y que tu dominio está autorizado.';
                     } else if (error.code === 'auth/network-request-failed') {
                         errorMessage = 'Error de red. Por favor, revisa tu conexión a internet.';
+                    } else if (error.code === 'auth/api-key-not-valid') {
+                        errorMessage = 'Error: La API Key de Firebase no es válida. Por favor, asegúrate de que tu firebaseConfig es correcta.';
                     }
                     showMessageBox(errorMessage);
                 }
