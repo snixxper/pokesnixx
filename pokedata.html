@@ -16,7 +16,7 @@
     <!-- FUENTE: Geist Mono -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist-font@1.3.0/dist/mono.css" />
     
-    <!-- NUEVO: Bootstrap Icons -->
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
 
@@ -40,13 +40,14 @@
         
         .is-owned .card-image { box-shadow: 0 0 15px 5px rgba(234, 179, 8, 0.7); border: 2px solid #ca8a04; }
 
-        .card-btn { position: absolute; width: 32px; height: 32px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.6); color: white; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; border: 2px solid white; cursor: pointer; transition: background-color 0.2s, transform 0.2s; z-index: 10; }
+        /* CAMBIO 1: Se quita el borde blanco */
+        .card-btn { position: absolute; width: 32px; height: 32px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.6); color: white; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.2s, transform 0.2s; z-index: 10; }
         .card-btn:hover { transform: scale(1.1); }
         
-        .manage-card-btn { top: 8px; right: 8px; }
-        .manage-card-btn.in-any-collection { background-color: #3B82F6; }
+        .manage-card-btn { top: 8px; right: 8px; font-size: 16px; }
+        /* CAMBIO 2: Se quita el fondo azul del botón de gestión */
         
-        .owned-toggle-btn { top: 8px; left: 8px; font-size: 16px; /* Ajuste para el ícono */}
+        .owned-toggle-btn { top: 8px; left: 8px; font-size: 16px; }
         .owned-toggle-btn.is-owned { background-color: #16a34a; }
 
         :disabled { background-color: #e9ecef; cursor: not-allowed; }
@@ -350,14 +351,14 @@
 
                 const manageBtn = document.createElement('button');
                 manageBtn.className = 'card-btn manage-card-btn';
-                manageBtn.innerHTML = '...';
+                // CAMBIO 3: Usar ícono en el botón de gestión
+                manageBtn.innerHTML = `<i class="bi bi-box2-heart-fill"></i>`;
                 manageBtn.onclick = () => openCardAssignmentModal(card.id);
 
                 const ownedBtn = document.createElement('button');
                 ownedBtn.className = 'card-btn owned-toggle-btn';
                 ownedBtn.onclick = () => toggleOwnedStatus(card.id);
                 
-                // NUEVO: Crear el elemento <i> para el ícono
                 const ownedIcon = document.createElement('i');
                 ownedBtn.appendChild(ownedIcon);
 
@@ -393,15 +394,15 @@
             allCards.forEach(cardEl => {
                 const cardId = cardEl.dataset.cardId;
                 const isInAny = cardAssignments[cardId] && cardAssignments[cardId].length > 0;
+                // La clase in-any-collection ya no tiene efecto visual, se podría quitar si se desea
                 cardEl.querySelector('.manage-card-btn').classList.toggle('in-any-collection', isInAny);
 
                 const isOwned = userOwnedCards.has(cardId);
                 cardEl.classList.toggle('is-owned', isOwned);
                 const ownedBtn = cardEl.querySelector('.owned-toggle-btn');
-                const ownedIcon = ownedBtn.querySelector('i'); // Obtener el ícono
+                const ownedIcon = ownedBtn.querySelector('i');
                 ownedBtn.classList.toggle('is-owned', isOwned);
                 
-                // NUEVO: Cambiar la clase del ícono
                 if (isOwned) {
                     ownedIcon.className = 'bi bi-bookmark-check-fill';
                 } else {
