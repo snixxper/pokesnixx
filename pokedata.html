@@ -23,22 +23,29 @@
         .card-container:hover { transform: scale(1.05); }
         .card-image { transition: box-shadow 0.3s ease-in-out; }
         .card-container:hover .card-image { box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); }
+        
+        /* Estilo para cartas asignadas a alguna colección */
         .in-any-collection .card-image { box-shadow: 0 0 15px 5px rgba(59, 130, 246, 0.7); border: 2px solid #3B82F6; }
+        /* Estilo para cartas marcadas como OBTENIDAS (prioridad sobre el anterior) */
+        .is-owned .card-image { box-shadow: 0 0 15px 5px rgba(234, 179, 8, 0.7); border: 2px solid #ca8a04; }
 
-        .manage-card-btn { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.6); color: white; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; border: 2px solid white; cursor: pointer; transition: background-color 0.2s, transform 0.2s; z-index: 10; }
-        .manage-card-btn:hover { transform: scale(1.1); }
+        .card-btn { position: absolute; width: 32px; height: 32px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.6); color: white; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; border: 2px solid white; cursor: pointer; transition: background-color 0.2s, transform 0.2s; z-index: 10; }
+        .card-btn:hover { transform: scale(1.1); }
+        
+        .manage-card-btn { top: 8px; right: 8px; }
         .manage-card-btn.in-any-collection { background-color: #3B82F6; }
+        
+        .owned-toggle-btn { top: 8px; left: 8px; }
+        .owned-toggle-btn.is-owned { background-color: #16a34a; }
 
         :disabled { background-color: #e9ecef; cursor: not-allowed; }
 
-        /* Estilos para las ventanas modales */
         .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 40; }
         .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <!-- Contenedor principal -->
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
             <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Gestor de Colecciones Pokémon</h1>
@@ -46,29 +53,32 @@
         </header>
 
         <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
-            <!-- Sección de Colecciones Personales -->
             <div class="mb-6 text-center border-b pb-6">
                  <h2 class="text-lg font-semibold text-gray-800">Mis Colecciones</h2>
                  <p id="auth-status" class="text-sm text-red-500 font-semibold mt-1">Por favor, inicia sesión para gestionar tus colecciones.</p>
-                 <button id="manageCollectionsBtn" class="mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg" disabled>
-                     Gestionar Mis Colecciones
-                 </button>
+                 <button id="manageCollectionsBtn" class="mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg" disabled>Gestionar Mis Colecciones</button>
             </div>
 
-            <!-- Formulario de Búsqueda -->
-            <form id="searchForm" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <form id="searchForm" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                 <div>
-                    <label for="pokemonName" class="block text-sm font-medium text-gray-700">Nombre del Pokémon</label>
+                    <label for="pokemonName" class="block text-sm font-medium text-gray-700">Nombre</label>
                     <input type="text" id="pokemonName" class="mt-1 w-full p-3 border border-gray-300 rounded-lg" placeholder="Ej: Pikachu" disabled>
                 </div>
                 <div>
                     <label for="pokemonType" class="block text-sm font-medium text-gray-700">Tipo</label>
                     <select id="pokemonType" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="">Cualquiera</option> </select>
                 </div>
-                <!-- Filtro por Colección Personalizada -->
                 <div>
-                    <label for="collectionFilter" class="block text-sm font-medium text-gray-700">Filtrar por Colección</label>
-                    <select id="collectionFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="all">Todas las Cartas Buscadas</option> </select>
+                    <label for="collectionFilter" class="block text-sm font-medium text-gray-700">Colección</label>
+                    <select id="collectionFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="all">Todas</option> </select>
+                </div>
+                <div>
+                    <label for="ownedFilter" class="block text-sm font-medium text-gray-700">Posesión</label>
+                    <select id="ownedFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled>
+                        <option value="all">Todas</option>
+                        <option value="owned">Obtenidas</option>
+                        <option value="unowned">No Obtenidas</option>
+                    </select>
                 </div>
                 <button type="submit" id="searchButton" class="w-full bg-blue-600 text-white font-bold p-3 rounded-lg hover:bg-blue-700" disabled>Buscar</button>
             </form>
@@ -78,7 +88,7 @@
         <main id="results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6"></main>
     </div>
 
-    <!-- Modal para Gestionar Colecciones Personales -->
+    <!-- Modales (sin cambios) -->
     <div id="manageCollectionsModal" class="modal-backdrop hidden">
         <div class="modal-content bg-white p-6 rounded-lg shadow-xl w-11/12 md:w-1/3">
             <h3 class="text-xl font-bold mb-4">Gestionar Mis Colecciones</h3>
@@ -90,8 +100,6 @@
             <button id="closeManageCollectionsModal" class="mt-4 w-full bg-gray-500 text-white p-2 rounded-lg hover:bg-gray-600">Cerrar</button>
         </div>
     </div>
-    
-    <!-- Modal para Asignar Carta a Colecciones -->
     <div id="assignCardModal" class="modal-backdrop hidden">
          <div class="modal-content bg-white p-6 rounded-lg shadow-xl w-11/12 md:w-1/3">
             <h3 class="text-xl font-bold mb-4">Asignar Carta a...</h3>
@@ -109,7 +117,6 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, writeBatch } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // ** Configuración del proyecto Firebase **
         const firebaseConfig = {
             apiKey: "AIzaSyBy9NGyELQsS-t59D93EM4geWBwBr56O08",
             authDomain: "pokesnixx.firebaseapp.com",
@@ -120,24 +127,25 @@
             measurementId: "G-EX07BC6EX4"
         };
 
-        // --- INICIALIZACIÓN Y VARIABLES GLOBALES ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         
         let currentUser = null;
-        let userCustomCollections = []; // Array de strings: ["Wishlist", "Mazo Fuego"]
-        let cardAssignments = {}; // Objeto: { "card-id-1": ["Wishlist"], "card-id-2": ["Mazo Fuego"] }
-        let unsubscribes = []; // Para detener listeners
+        let userCustomCollections = [];
+        let cardAssignments = {};
+        let userOwnedCards = new Set(); // NUEVO: para las cartas obtenidas
+        let unsubscribes = [];
 
-        // --- SELECTORES DEL DOM ---
         const dom = {
+            // Selectores del DOM (sin cambios, pero añadir el nuevo filtro)
             authStatus: document.getElementById('auth-status'),
             manageCollectionsBtn: document.getElementById('manageCollectionsBtn'),
             searchForm: document.getElementById('searchForm'),
             pokemonName: document.getElementById('pokemonName'),
             pokemonType: document.getElementById('pokemonType'),
             collectionFilter: document.getElementById('collectionFilter'),
+            ownedFilter: document.getElementById('ownedFilter'), // NUEVO
             searchButton: document.getElementById('searchButton'),
             results: document.getElementById('results'),
             message: document.getElementById('message'),
@@ -152,7 +160,6 @@
             closeAssignCardModal: document.getElementById('closeAssignCardModal')
         };
         
-        // --- MANEJO DE AUTENTICACIÓN ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
@@ -165,146 +172,79 @@
                 dom.authStatus.textContent = 'Inicia sesión para gestionar tus colecciones.';
                 dom.authStatus.classList.replace('text-green-600', 'text-red-500');
                 disableApp();
-                unsubscribes.forEach(unsub => unsub()); // Detener listeners
+                unsubscribes.forEach(unsub => unsub());
             }
         });
 
-        // --- LÓGICA DE FIREBASE (NUEVA ESTRUCTURA) ---
         function listenToUserData() {
             if (!currentUser) return;
-            // Detener listeners anteriores
             unsubscribes.forEach(unsub => unsub());
             unsubscribes = [];
 
             // Listener para colecciones personalizadas
             const customCollectionsRef = doc(db, 'users', currentUser.uid, 'collections', 'metadata');
-            const unsub1 = onSnapshot(customCollectionsRef, (docSnap) => {
+            unsubscribes.push(onSnapshot(customCollectionsRef, (docSnap) => {
                 userCustomCollections = docSnap.exists() ? docSnap.data().list || [] : [];
                 populateCollectionFilter();
                 updateDisplayedCardsState();
-            });
+            }));
 
             // Listener para asignaciones de cartas
             const assignmentsRef = doc(db, 'users', currentUser.uid, 'cards', 'assignments');
-            const unsub2 = onSnapshot(assignmentsRef, (docSnap) => {
+            unsubscribes.push(onSnapshot(assignmentsRef, (docSnap) => {
                 cardAssignments = docSnap.exists() ? docSnap.data() : {};
                 updateDisplayedCardsState();
-                applyCollectionFilter();
-            });
-            unsubscribes.push(unsub1, unsub2);
-        }
+            }));
 
-        // --- GESTIÓN DE COLECCIONES PERSONALIZADAS ---
-        dom.manageCollectionsBtn.addEventListener('click', () => {
-            populateCollectionsManager();
-            dom.manageCollectionsModal.classList.remove('hidden');
-        });
-        dom.closeManageCollectionsModal.addEventListener('click', () => dom.manageCollectionsModal.classList.add('hidden'));
-        dom.addCollectionBtn.addEventListener('click', async () => {
-            const name = dom.newCollectionName.value.trim();
-            if (name && !userCustomCollections.includes(name)) {
-                const ref = doc(db, 'users', currentUser.uid, 'collections', 'metadata');
-                // Se usa set con merge para crear el documento si no existe
-                await setDoc(ref, { list: arrayUnion(name) }, { merge: true });
-                dom.newCollectionName.value = '';
-                populateCollectionsManager(); // Repopular la lista
-            }
-        });
-
-        function populateCollectionsManager() {
-            dom.collectionsList.innerHTML = '';
-            userCustomCollections.forEach(name => {
-                const div = document.createElement('div');
-                div.className = 'flex justify-between items-center p-2 border-b';
-                div.textContent = name;
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = 'Eliminar';
-                deleteBtn.className = 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600';
-                deleteBtn.onclick = () => deleteCollection(name);
-                div.appendChild(deleteBtn);
-                dom.collectionsList.appendChild(div);
-            });
-        }
-
-        async function deleteCollection(name) {
-            if (!confirm(`¿Seguro que quieres eliminar la colección "${name}"? Esta acción no se puede deshacer.`)) return;
-
-            const batch = writeBatch(db);
-            // 1. Eliminar el nombre de la lista de colecciones
-            const metadataRef = doc(db, 'users', currentUser.uid, 'collections', 'metadata');
-            batch.update(metadataRef, { list: arrayRemove(name) });
-            
-            // 2. Eliminar las asignaciones de esta colección en todas las cartas
-            const assignmentsRef = doc(db, 'users', currentUser.uid, 'cards', 'assignments');
-            const updatedAssignments = { ...cardAssignments };
-            Object.keys(updatedAssignments).forEach(cardId => {
-                const assignments = updatedAssignments[cardId];
-                if (assignments) {
-                    const index = assignments.indexOf(name);
-                    if (index > -1) {
-                        assignments.splice(index, 1);
-                    }
-                }
-            });
-            batch.set(assignmentsRef, updatedAssignments);
-            
-            await batch.commit();
-            populateCollectionsManager();
-        }
-
-        // --- ASIGNACIÓN DE CARTAS A COLECCIONES ---
-        dom.closeAssignCardModal.addEventListener('click', () => dom.assignCardModal.classList.add('hidden'));
-        dom.saveCardAssignmentBtn.addEventListener('click', async () => {
-            const cardId = dom.saveCardAssignmentBtn.dataset.cardId;
-            const selectedCollections = [];
-            dom.assignCollectionsList.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
-                selectedCollections.push(checkbox.value);
-            });
-            
-            const assignmentsRef = doc(db, 'users', currentUser.uid, 'cards', 'assignments');
-            await setDoc(assignmentsRef, { [cardId]: selectedCollections }, { merge: true });
-
-            dom.assignCardModal.classList.add('hidden');
-        });
-
-        // --- LÓGICA DE BÚSQUEDA Y FILTROS ---
-        dom.searchForm.addEventListener('submit', handleSearch);
-        async function handleSearch(event) {
-            event.preventDefault();
-            // ... Lógica de búsqueda (similar a la anterior) ...
+            // NUEVO: Listener para cartas obtenidas
+            const ownedRef = doc(db, 'users', currentUser.uid, 'cards', 'owned');
+            unsubscribes.push(onSnapshot(ownedRef, (docSnap) => {
+                userOwnedCards = docSnap.exists() ? new Set(docSnap.data().ids || []) : new Set();
+                updateDisplayedCardsState();
+            }));
         }
         
-        dom.collectionFilter.addEventListener('change', applyCollectionFilter);
+        async function toggleOwnedStatus(cardId) {
+            if (!currentUser) return;
+            const ownedRef = doc(db, 'users', currentUser.uid, 'cards', 'owned');
+            if (userOwnedCards.has(cardId)) {
+                await setDoc(ownedRef, { ids: arrayRemove(cardId) }, { merge: true });
+            } else {
+                await setDoc(ownedRef, { ids: arrayUnion(cardId) }, { merge: true });
+            }
+        }
+        
+        dom.collectionFilter.addEventListener('change', applyAllFilters);
+        dom.ownedFilter.addEventListener('change', applyAllFilters);
 
-        function applyCollectionFilter() {
-            const filterValue = dom.collectionFilter.value;
+        function applyAllFilters() {
+            const collectionFilterValue = dom.collectionFilter.value;
+            const ownedFilterValue = dom.ownedFilter.value;
             const allCards = dom.results.querySelectorAll('.card-container');
 
             allCards.forEach(cardEl => {
                 const cardId = cardEl.dataset.cardId;
+                
+                // Chequear filtro de colección
                 const cardColls = cardAssignments[cardId] || [];
-                let isVisible = (filterValue === 'all' || cardColls.includes(filterValue));
+                const isInCollection = (collectionFilterValue === 'all' || cardColls.includes(collectionFilterValue));
+                
+                // Chequear filtro de posesión
+                const isOwned = userOwnedCards.has(cardId);
+                let hasOwnedStatus = true;
+                if (ownedFilterValue === 'owned' && !isOwned) {
+                    hasOwnedStatus = false;
+                } else if (ownedFilterValue === 'unowned' && isOwned) {
+                    hasOwnedStatus = false;
+                }
+
+                // La carta es visible solo si cumple ambos filtros
+                const isVisible = isInCollection && hasOwnedStatus;
                 cardEl.classList.toggle('hidden', !isVisible);
             });
         }
 
-        function populateCollectionFilter() {
-            // Guardar el valor seleccionado actualmente
-            const currentSelection = dom.collectionFilter.value;
-            dom.collectionFilter.innerHTML = '<option value="all">Todas las Cartas Buscadas</option>';
-            userCustomCollections.forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                dom.collectionFilter.appendChild(option);
-            });
-            // Restaurar la selección si aún existe
-            if (document.querySelector(`#collectionFilter option[value='${currentSelection}']`)) {
-                 dom.collectionFilter.value = currentSelection;
-            }
-        }
 
-        // --- RENDERIZADO Y ESTADO DE LA UI ---
         function displayCards(cards) {
             dom.results.innerHTML = '';
             cards.forEach(card => {
@@ -316,56 +256,45 @@
                 cardImage.src = card.images.small;
                 cardImage.className = 'rounded-lg shadow-md card-image w-full';
 
+                // Botón para gestionar colecciones (derecha)
                 const manageBtn = document.createElement('button');
-                manageBtn.className = 'manage-card-btn';
+                manageBtn.className = 'card-btn manage-card-btn';
                 manageBtn.innerHTML = '...';
                 manageBtn.onclick = () => openCardAssignmentModal(card.id);
 
-                cardContainer.append(manageBtn, cardImage);
+                // NUEVO: Checkbox para marcar como obtenida (izquierda)
+                const ownedBtn = document.createElement('button');
+                ownedBtn.className = 'card-btn owned-toggle-btn';
+                ownedBtn.onclick = () => toggleOwnedStatus(card.id);
+                
+                cardContainer.append(ownedBtn, manageBtn, cardImage);
                 dom.results.append(cardContainer);
             });
             updateDisplayedCardsState();
-            applyCollectionFilter();
-        }
-
-        function openCardAssignmentModal(cardId) {
-            dom.saveCardAssignmentBtn.dataset.cardId = cardId;
-            dom.assignCollectionsList.innerHTML = '';
-            const currentAssignments = cardAssignments[cardId] || [];
-
-            userCustomCollections.forEach(name => {
-                const div = document.createElement('div');
-                div.className = 'flex items-center mb-2';
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = `chk-${name}-${cardId}`;
-                checkbox.value = name;
-                checkbox.checked = currentAssignments.includes(name);
-                checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500';
-                
-                const label = document.createElement('label');
-                label.htmlFor = `chk-${name}-${cardId}`;
-                label.textContent = name;
-                label.className = 'ml-2 block text-sm text-gray-900';
-                
-                div.append(checkbox, label);
-                dom.assignCollectionsList.appendChild(div);
-            });
-
-            dom.assignCardModal.classList.remove('hidden');
         }
 
         function updateDisplayedCardsState() {
             const allCards = dom.results.querySelectorAll('.card-container');
             allCards.forEach(cardEl => {
                 const cardId = cardEl.dataset.cardId;
+
+                // Actualizar estado de "en colección"
                 const isInAny = cardAssignments[cardId] && cardAssignments[cardId].length > 0;
                 cardEl.classList.toggle('in-any-collection', isInAny);
                 cardEl.querySelector('.manage-card-btn').classList.toggle('in-any-collection', isInAny);
+
+                // NUEVO: Actualizar estado de "obtenida"
+                const isOwned = userOwnedCards.has(cardId);
+                cardEl.classList.toggle('is-owned', isOwned);
+                const ownedBtn = cardEl.querySelector('.owned-toggle-btn');
+                ownedBtn.classList.toggle('is-owned', isOwned);
+                ownedBtn.innerHTML = isOwned ? '&#10003;' : '';
             });
+            applyAllFilters();
         }
         
-        // --- FUNCIONES DE HABILITAR/DESHABILITAR APP ---
+        // El resto de funciones (enableApp, disableApp, gestión de modales, búsqueda, etc.)
+        // permanecen mayormente iguales, solo se adaptan para habilitar/deshabilitar el nuevo filtro.
         function enableApp() {
             Object.values(dom).forEach(el => {
                 if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'BUTTON') {
@@ -376,7 +305,7 @@
             loadDropdownFilters();
         }
         function disableApp() {
-            Object.values(dom).forEach(el => {
+             Object.values(dom).forEach(el => {
                 if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'BUTTON') {
                     el.disabled = true;
                 }
@@ -385,11 +314,13 @@
             dom.message.textContent = '';
             userCustomCollections = [];
             cardAssignments = {};
+            userOwnedCards.clear();
         }
 
+        // --- Funciones de ayuda (sin cambios significativos) ---
         async function loadDropdownFilters() { 
             const API_BASE_URL = 'https://api.pokemontcg.io/v2';
-            const apiKey = "0b793f15-1998-48e4-9cc4-0a9e1b5badf6"; // Clave API de Pokémon TCG
+            const apiKey = "0b793f15-1998-48e4-9cc4-0a9e1b5badf6"; 
             if (!apiKey) { return; }
 
             try {
@@ -398,7 +329,6 @@
                 const data = await response.json();
                 
                 const typeSelect = document.getElementById('pokemonType');
-                // Limpiar opciones anteriores excepto la primera
                 while (typeSelect.options.length > 1) {
                     typeSelect.remove(1);
                 }
@@ -416,7 +346,7 @@
         document.getElementById('searchForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             if (!currentUser) return;
-            const apiKey = "0b793f15-1998-48e4-9cc4-0a9e1b5badf6"; // Clave API de Pokémon TCG
+            const apiKey = "0b793f15-1998-48e4-9cc4-0a9e1b5badf6";
             if (!apiKey) { dom.message.textContent = 'Falta la clave API de Pokémon TCG.'; return; }
 
             dom.results.innerHTML = '';
@@ -456,6 +386,104 @@
                 dom.message.textContent = `Ocurrió un error: ${error.message}`;
             }
         });
+        
+        function populateCollectionFilter() {
+            const currentSelection = dom.collectionFilter.value;
+            dom.collectionFilter.innerHTML = '<option value="all">Todas</option>';
+            userCustomCollections.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                dom.collectionFilter.appendChild(option);
+            });
+            if (document.querySelector(`#collectionFilter option[value='${currentSelection}']`)) {
+                 dom.collectionFilter.value = currentSelection;
+            }
+        }
+
+        // El resto de funciones para gestionar modales y colecciones se mantienen igual
+        dom.manageCollectionsBtn.addEventListener('click', () => {
+            populateCollectionsManager();
+            dom.manageCollectionsModal.classList.remove('hidden');
+        });
+        dom.closeManageCollectionsModal.addEventListener('click', () => dom.manageCollectionsModal.classList.add('hidden'));
+        dom.addCollectionBtn.addEventListener('click', async () => {
+            const name = dom.newCollectionName.value.trim();
+            if (name && !userCustomCollections.includes(name)) {
+                const ref = doc(db, 'users', currentUser.uid, 'collections', 'metadata');
+                await setDoc(ref, { list: arrayUnion(name) }, { merge: true });
+                dom.newCollectionName.value = '';
+                populateCollectionsManager();
+            }
+        });
+        function populateCollectionsManager() {
+            dom.collectionsList.innerHTML = '';
+            userCustomCollections.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-2 border-b';
+                div.textContent = name;
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Eliminar';
+                deleteBtn.className = 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600';
+                deleteBtn.onclick = () => deleteCollection(name);
+                div.appendChild(deleteBtn);
+                dom.collectionsList.appendChild(div);
+            });
+        }
+        async function deleteCollection(name) {
+            if (!confirm(`¿Seguro que quieres eliminar la colección "${name}"? Esta acción no se puede deshacer.`)) return;
+            const batch = writeBatch(db);
+            const metadataRef = doc(db, 'users', currentUser.uid, 'collections', 'metadata');
+            batch.update(metadataRef, { list: arrayRemove(name) });
+            const assignmentsRef = doc(db, 'users', currentUser.uid, 'cards', 'assignments');
+            const updatedAssignments = { ...cardAssignments };
+            Object.keys(updatedAssignments).forEach(cardId => {
+                const assignments = updatedAssignments[cardId];
+                if (assignments) {
+                    const index = assignments.indexOf(name);
+                    if (index > -1) {
+                        assignments.splice(index, 1);
+                    }
+                }
+            });
+            batch.set(assignmentsRef, updatedAssignments);
+            await batch.commit();
+            populateCollectionsManager();
+        }
+        dom.closeAssignCardModal.addEventListener('click', () => dom.assignCardModal.classList.add('hidden'));
+        dom.saveCardAssignmentBtn.addEventListener('click', async () => {
+            const cardId = dom.saveCardAssignmentBtn.dataset.cardId;
+            const selectedCollections = [];
+            dom.assignCollectionsList.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+                selectedCollections.push(checkbox.value);
+            });
+            const assignmentsRef = doc(db, 'users', currentUser.uid, 'cards', 'assignments');
+            await setDoc(assignmentsRef, { [cardId]: selectedCollections }, { merge: true });
+            dom.assignCardModal.classList.add('hidden');
+        });
+        function openCardAssignmentModal(cardId) {
+            dom.saveCardAssignmentBtn.dataset.cardId = cardId;
+            dom.assignCollectionsList.innerHTML = '';
+            const currentAssignments = cardAssignments[cardId] || [];
+            userCustomCollections.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center mb-2';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `chk-${name}-${cardId}`;
+                checkbox.value = name;
+                checkbox.checked = currentAssignments.includes(name);
+                checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500';
+                const label = document.createElement('label');
+                label.htmlFor = `chk-${name}-${cardId}`;
+                label.textContent = name;
+                label.className = 'ml-2 block text-sm text-gray-900';
+                div.append(checkbox, label);
+                dom.assignCollectionsList.appendChild(div);
+            });
+            dom.assignCardModal.classList.remove('hidden');
+        }
+
     </script>
 </body>
 </html>
