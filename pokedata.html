@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>snixx - Gestor Avanzado de Colecciones Pokémon TCG </title>
+    <title>Gestor Avanzado de Colecciones Pokémon TCG con Firebase</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -62,20 +62,15 @@
             <p class="text-gray-400 mt-2 font-geist-mono">Busca cartas y organízalas en tus propias colecciones.</p>
         </header>
 
-        <!-- CAMBIO 1: Panel de filtros sin bordes redondeados -->
         <div class="bg-white p-6 shadow-lg mb-8">
             <div class="mb-6 text-center border-b border-gray-200 pb-6">
-                 <!-- CAMBIO 2: Botón de gestión rediseñado -->
                  <button id="manageCollectionsBtn" class="mt-2 bg-black hover:bg-gray-800 text-white py-2 px-4 font-geist-mono font-bold uppercase" disabled>Gestionar Mis Colecciones</button>
                  <p id="auth-status" class="text-sm text-red-500 font-semibold mt-4 font-geist-mono">Por favor, inicia sesión para gestionar tus colecciones.</p>
             </div>
 
-            <!-- Contenedor de Filtros con los nuevos campos -->
             <div id="filtersContainer" class="grid grid-cols-1 md:grid-cols-4 gap-8 items-end">
                 <div>
-                    <!-- CAMBIO 3: Etiquetas de filtros más grandes -->
                     <label for="ownedFilter" class="block text-base font-bold text-gray-700 font-geist-mono">Posesión</label>
-                    <!-- CAMBIO 4: Texto de filtros más pequeño -->
                     <select id="ownedFilter" class="mt-1 w-full p-3 bg-gray-100 border border-gray-200 text-gray-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-geist-mono text-sm" disabled>
                         <option value="all">Todas</option>
                         <option value="owned">Obtenidas</option>
@@ -88,7 +83,6 @@
                 </div>
                 <div>
                     <label for="pokemonName" class="block text-base font-bold text-gray-700 font-geist-mono">Nombre</label>
-                    <!-- CAMBIO 5: Placeholder actualizado -->
                     <input type="text" id="pokemonName" class="mt-1 w-full p-3 bg-gray-100 border border-gray-200 text-gray-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-geist-mono text-sm" placeholder="Ej: Chikorita" disabled>
                 </div>
                 <div>
@@ -533,7 +527,7 @@
             const assignmentsRef = doc(db, 'users', currentUser.uid, 'cards', 'assignments');
             await setDoc(assignmentsRef, { [cardId]: selectedCollections }, { merge: true });
             dom.assignCardModal.classList.add('hidden');
-        }
+        });
         function openCardAssignmentModal(cardId) {
             dom.saveCardAssignmentBtn.dataset.cardId = cardId;
             dom.assignCollectionsList.innerHTML = '';
