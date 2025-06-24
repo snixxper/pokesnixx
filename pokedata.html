@@ -134,21 +134,21 @@
         let currentUser = null;
         let userCustomCollections = [];
         let cardAssignments = {};
-        let userOwnedCards = new Set(); // NUEVO: para las cartas obtenidas
+        let userOwnedCards = new Set();
         let unsubscribes = [];
 
         const dom = {
-            // Selectores del DOM (sin cambios, pero añadir el nuevo filtro)
             authStatus: document.getElementById('auth-status'),
             manageCollectionsBtn: document.getElementById('manageCollectionsBtn'),
             searchForm: document.getElementById('searchForm'),
             pokemonName: document.getElementById('pokemonName'),
             pokemonType: document.getElementById('pokemonType'),
             collectionFilter: document.getElementById('collectionFilter'),
-            ownedFilter: document.getElementById('ownedFilter'), // NUEVO
+            ownedFilter: document.getElementById('ownedFilter'),
             searchButton: document.getElementById('searchButton'),
             results: document.getElementById('results'),
             message: document.getElementById('message'),
+            loader: document.getElementById('loader'),
             manageCollectionsModal: document.getElementById('manageCollectionsModal'),
             collectionsList: document.getElementById('collectionsList'),
             newCollectionName: document.getElementById('newCollectionName'),
@@ -181,7 +181,6 @@
             unsubscribes.forEach(unsub => unsub());
             unsubscribes = [];
 
-            // Listener para colecciones personalizadas
             const customCollectionsRef = doc(db, 'users', currentUser.uid, 'collections', 'metadata');
             unsubscribes.push(onSnapshot(customCollectionsRef, (docSnap) => {
                 userCustomCollections = docSnap.exists() ? docSnap.data().list || [] : [];
@@ -189,20 +188,77 @@
                 updateDisplayedCardsState();
             }));
 
-            // Listener para asignaciones de cartas
             const assignmentsRef = doc(db, 'users', currentUser.uid, 'cards', 'assignments');
             unsubscribes.push(onSnapshot(assignmentsRef, (docSnap) => {
                 cardAssignments = docSnap.exists() ? docSnap.data() : {};
                 updateDisplayedCardsState();
             }));
 
-            // NUEVO: Listener para cartas obtenidas
             const ownedRef = doc(db, 'users', currentUser.uid, 'cards', 'owned');
             unsubscribes.push(onSnapshot(ownedRef, (docSnap) => {
                 userOwnedCards = docSnap.exists() ? new Set(docSnap.data().ids || []) : new Set();
                 updateDisplayedCardsState();
             }));
         }
+        
+        async function fetchAndDisplayCards(url) {
+            if (!currentUser) return;
+            const apiKey = "0b793f15-1998-48e4-9cc4-0a9e1b5badf6";
+            if (!apiKey) {
+                dom.message.textContent = 'Falta la clave API de Pokémon TCG.';
+                return;
+            }
+
+            dom.results.innerHTML = '';
+            dom.message.textContent = 'Cargando cartas...';
+            dom.loader.classList.remove('hidden');
+
+            try {
+                const response = await fetch(url, { headers: { 'X-Api-Key': apiKey } });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || 'Error en la API.');
+                }
+                const data = await response.json();
+                dom.loader.classList.add('hidden');
+                dom.message.textContent = '';
+
+                if (data.data && data.data.length > 0) {
+                    displayCards(data.data);
+                } else {
+                    dom.message.textContent = 'No se encontraron cartas.';
+                }
+            } catch (error) {
+                console.error('Error durante la búsqueda:', error);
+                dom.loader.classList.add('hidden');
+                dom.message.textContent = `Ocurrió un error: ${error.message}`;
+            }
+        }
+
+        function fetchInitialCards() {
+            const API_BASE_URL = 'https://api.pokemontcg.io/v2';
+            const url = `${API_BASE_URL}/cards?orderBy=name&pageSize=100`;
+            fetchAndDisplayCards(url);
+        }
+
+        dom.searchForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            
+            let queryParts = [];
+            if (dom.pokemonName.value) queryParts.push(`name:${dom.pokemonName.value.trim()}*`);
+            if (dom.pokemonType.value) queryParts.push(`types:${dom.pokemonType.value}`);
+
+            if (queryParts.length === 0) {
+                dom.message.textContent = 'Introduce al menos un filtro para buscar.';
+                return;
+            }
+
+            const query = queryParts.join(' ');
+            const API_BASE_URL = 'https://api.pokemontcg.io/v2';
+            const url = `${API_BASE_URL}/cards?q=${encodeURIComponent(query)}&orderBy=name&pageSize=100`;
+            
+            fetchAndDisplayCards(url);
+        });
         
         async function toggleOwnedStatus(cardId) {
             if (!currentUser) return;
@@ -225,11 +281,9 @@
             allCards.forEach(cardEl => {
                 const cardId = cardEl.dataset.cardId;
                 
-                // Chequear filtro de colección
                 const cardColls = cardAssignments[cardId] || [];
                 const isInCollection = (collectionFilterValue === 'all' || cardColls.includes(collectionFilterValue));
                 
-                // Chequear filtro de posesión
                 const isOwned = userOwnedCards.has(cardId);
                 let hasOwnedStatus = true;
                 if (ownedFilterValue === 'owned' && !isOwned) {
@@ -238,12 +292,10 @@
                     hasOwnedStatus = false;
                 }
 
-                // La carta es visible solo si cumple ambos filtros
                 const isVisible = isInCollection && hasOwnedStatus;
                 cardEl.classList.toggle('hidden', !isVisible);
             });
         }
-
 
         function displayCards(cards) {
             dom.results.innerHTML = '';
@@ -256,13 +308,11 @@
                 cardImage.src = card.images.small;
                 cardImage.className = 'rounded-lg shadow-md card-image w-full';
 
-                // Botón para gestionar colecciones (derecha)
                 const manageBtn = document.createElement('button');
                 manageBtn.className = 'card-btn manage-card-btn';
                 manageBtn.innerHTML = '...';
                 manageBtn.onclick = () => openCardAssignmentModal(card.id);
 
-                // NUEVO: Checkbox para marcar como obtenida (izquierda)
                 const ownedBtn = document.createElement('button');
                 ownedBtn.className = 'card-btn owned-toggle-btn';
                 ownedBtn.onclick = () => toggleOwnedStatus(card.id);
@@ -278,12 +328,10 @@
             allCards.forEach(cardEl => {
                 const cardId = cardEl.dataset.cardId;
 
-                // Actualizar estado de "en colección"
                 const isInAny = cardAssignments[cardId] && cardAssignments[cardId].length > 0;
                 cardEl.classList.toggle('in-any-collection', isInAny);
                 cardEl.querySelector('.manage-card-btn').classList.toggle('in-any-collection', isInAny);
 
-                // NUEVO: Actualizar estado de "obtenida"
                 const isOwned = userOwnedCards.has(cardId);
                 cardEl.classList.toggle('is-owned', isOwned);
                 const ownedBtn = cardEl.querySelector('.owned-toggle-btn');
@@ -293,17 +341,16 @@
             applyAllFilters();
         }
         
-        // El resto de funciones (enableApp, disableApp, gestión de modales, búsqueda, etc.)
-        // permanecen mayormente iguales, solo se adaptan para habilitar/deshabilitar el nuevo filtro.
         function enableApp() {
             Object.values(dom).forEach(el => {
                 if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'BUTTON') {
                     el.disabled = false;
                 }
             });
-            dom.message.textContent = '¡Bienvenido! Busca cartas para organizar tu colección.';
             loadDropdownFilters();
+            fetchInitialCards();
         }
+
         function disableApp() {
              Object.values(dom).forEach(el => {
                 if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'BUTTON') {
@@ -317,7 +364,6 @@
             userOwnedCards.clear();
         }
 
-        // --- Funciones de ayuda (sin cambios significativos) ---
         async function loadDropdownFilters() { 
             const API_BASE_URL = 'https://api.pokemontcg.io/v2';
             const apiKey = "0b793f15-1998-48e4-9cc4-0a9e1b5badf6"; 
@@ -342,51 +388,7 @@
                 console.error("Error al cargar los tipos de Pokémon:", error);
             }
         }
-        
-        document.getElementById('searchForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            if (!currentUser) return;
-            const apiKey = "0b793f15-1998-48e4-9cc4-0a9e1b5badf6";
-            if (!apiKey) { dom.message.textContent = 'Falta la clave API de Pokémon TCG.'; return; }
-
-            dom.results.innerHTML = '';
-            dom.message.textContent = '';
-            document.getElementById('loader').classList.remove('hidden');
-
-            let queryParts = [];
-            if (dom.pokemonName.value) queryParts.push(`name:${dom.pokemonName.value.trim()}*`);
-            if (dom.pokemonType.value) queryParts.push(`types:${dom.pokemonType.value}`);
-            
-            if (queryParts.length === 0) {
-                 dom.message.textContent = 'Introduce al menos un filtro para buscar.';
-                 document.getElementById('loader').classList.add('hidden');
-                 return;
-            }
-            
-            const query = queryParts.join(' ');
-            const API_BASE_URL = 'https://api.pokemontcg.io/v2';
-            const url = `${API_BASE_URL}/cards?q=${encodeURIComponent(query)}&orderBy=name&pageSize=100`;
-
-            try {
-                const response = await fetch(url, { headers: { 'X-Api-Key': apiKey } });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error.message || 'Error en la API.');
-                }
-                const data = await response.json();
-                document.getElementById('loader').classList.add('hidden');
-                if (data.data && data.data.length > 0) {
-                    displayCards(data.data);
-                } else {
-                    dom.message.textContent = 'No se encontraron cartas que coincidan.';
-                }
-            } catch (error) {
-                console.error('Error durante la búsqueda:', error);
-                document.getElementById('loader').classList.add('hidden');
-                dom.message.textContent = `Ocurrió un error: ${error.message}`;
-            }
-        });
-        
+                
         function populateCollectionFilter() {
             const currentSelection = dom.collectionFilter.value;
             dom.collectionFilter.innerHTML = '<option value="all">Todas</option>';
