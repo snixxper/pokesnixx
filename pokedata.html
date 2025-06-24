@@ -35,17 +35,17 @@
         }
 
         .card-container { display: flex; flex-direction: column; background-color: #fff; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); overflow: hidden; transition: transform 0.3s ease-in-out; }
-        .card-container:hover { transform: scale(1.05); }
+        /* CAMBIO 2: Efecto de hover más grande */
+        .card-container:hover { transform: scale(1.08); }
         .image-wrapper { position: relative; }
         
-        .is-owned .card-image { box-shadow: 0 0 15px 5px rgba(234, 179, 8, 0.7); border: 2px solid #ca8a04; }
+        /* CAMBIO 1: Se elimina el borde naranja de las cartas obtenidas */
+        .is-owned .card-image { /* El borde ha sido eliminado */ }
 
-        /* CAMBIO 1: Se quita el borde blanco */
         .card-btn { position: absolute; width: 32px; height: 32px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.6); color: white; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.2s, transform 0.2s; z-index: 10; }
         .card-btn:hover { transform: scale(1.1); }
         
         .manage-card-btn { top: 8px; right: 8px; font-size: 16px; }
-        /* CAMBIO 2: Se quita el fondo azul del botón de gestión */
         
         .owned-toggle-btn { top: 8px; left: 8px; font-size: 16px; }
         .owned-toggle-btn.is-owned { background-color: #16a34a; }
@@ -66,15 +66,17 @@
 
         <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
             <div class="mb-6 text-center border-b pb-6">
-                 <h2 class="text-lg font-semibold text-gray-800">Mis Colecciones</h2>
-                 <p id="auth-status" class="text-sm text-red-500 font-semibold mt-1">Por favor, inicia sesión para gestionar tus colecciones.</p>
+                 <!-- CAMBIO 3: Se elimina el subtítulo "Mis Colecciones" -->
+                 <!-- CAMBIO 4: Se añade la fuente Geist Mono a la info de sesión -->
+                 <p id="auth-status" class="text-sm text-red-500 font-semibold mt-1 font-geist-mono">Por favor, inicia sesión para gestionar tus colecciones.</p>
                  <button id="manageCollectionsBtn" class="mt-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg" disabled>Gestionar Mis Colecciones</button>
             </div>
 
             <!-- Contenedor de Filtros con los nuevos campos -->
             <div id="filtersContainer" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <!-- CAMBIO 5: Se añade la fuente Geist Mono a las etiquetas de los filtros -->
                 <div>
-                    <label for="ownedFilter" class="block text-sm font-medium text-gray-700">Posesión</label>
+                    <label for="ownedFilter" class="block text-sm font-medium text-gray-700 font-geist-mono">Posesión</label>
                     <select id="ownedFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled>
                         <option value="all">Todas</option>
                         <option value="owned">Obtenidas</option>
@@ -82,15 +84,15 @@
                     </select>
                 </div>
                  <div>
-                    <label for="collectionFilter" class="block text-sm font-medium text-gray-700">Colección</label>
+                    <label for="collectionFilter" class="block text-sm font-medium text-gray-700 font-geist-mono">Colección</label>
                     <select id="collectionFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="all">Todas</option> </select>
                 </div>
                 <div>
-                    <label for="pokemonName" class="block text-sm font-medium text-gray-700">Nombre</label>
+                    <label for="pokemonName" class="block text-sm font-medium text-gray-700 font-geist-mono">Nombre</label>
                     <input type="text" id="pokemonName" class="mt-1 w-full p-3 border border-gray-300 rounded-lg" placeholder="Ej: Pikachu" disabled>
                 </div>
                 <div>
-                    <label for="rarityFilter" class="block text-sm font-medium text-gray-700">Rareza</label>
+                    <label for="rarityFilter" class="block text-sm font-medium text-gray-700 font-geist-mono">Rareza</label>
                     <select id="rarityFilter" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white" disabled> <option value="">Cualquiera</option> </select>
                 </div>
             </div>
@@ -351,7 +353,6 @@
 
                 const manageBtn = document.createElement('button');
                 manageBtn.className = 'card-btn manage-card-btn';
-                // CAMBIO 3: Usar ícono en el botón de gestión
                 manageBtn.innerHTML = `<i class="bi bi-box2-heart-fill"></i>`;
                 manageBtn.onclick = () => openCardAssignmentModal(card.id);
 
@@ -394,7 +395,6 @@
             allCards.forEach(cardEl => {
                 const cardId = cardEl.dataset.cardId;
                 const isInAny = cardAssignments[cardId] && cardAssignments[cardId].length > 0;
-                // La clase in-any-collection ya no tiene efecto visual, se podría quitar si se desea
                 cardEl.querySelector('.manage-card-btn').classList.toggle('in-any-collection', isInAny);
 
                 const isOwned = userOwnedCards.has(cardId);
