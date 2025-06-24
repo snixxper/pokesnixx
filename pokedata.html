@@ -241,10 +241,8 @@
             let url;
 
             if (queryParts.length === 0) {
-                // Si no hay filtros de búsqueda, carga las cartas iniciales
                 url = `${API_BASE_URL}/cards?orderBy=name&pageSize=100`;
             } else {
-                // Si hay filtros, construye la consulta
                 const query = queryParts.join(' ');
                 url = `${API_BASE_URL}/cards?q=${encodeURIComponent(query)}&orderBy=name&pageSize=100`;
             }
@@ -254,7 +252,7 @@
 
         dom.pokemonName.addEventListener('input', () => {
             clearTimeout(searchDebounceTimeout);
-            searchDebounceTimeout = setTimeout(triggerSearch, 500); // Espera 500ms después de que el usuario deje de escribir
+            searchDebounceTimeout = setTimeout(triggerSearch, 500);
         });
 
         dom.pokemonType.addEventListener('change', triggerSearch);
@@ -346,9 +344,9 @@
                     el.disabled = false;
                 }
             });
-            dom.ownedFilter.value = 'owned'; // Establecer "Obtenidas" como valor por defecto
+            dom.ownedFilter.value = 'all'; // CAMBIO: Mostrar "Todas" por defecto para que el usuario vea cartas al instante.
             loadDropdownFilters();
-            triggerSearch(); // Reemplaza a fetchInitialCards para que aplique los filtros por defecto
+            triggerSearch();
         }
 
         function disableApp() {
