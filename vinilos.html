@@ -14,35 +14,63 @@
 
     <style>
         body {
-            /* Fuente Geist Mono aplicada a toda la página */
             font-family: 'Geist Mono', monospace;
         }
         h1 {
-            /* Fuente Bebas Neue para el título */
             font-family: 'Bebas Neue', sans-serif;
-            letter-spacing: 2px; /* Espaciado entre letras para mejorar el estilo */
+            letter-spacing: 2px;
         }
-        .card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        .card-image-container {
+            position: relative;
+            overflow: hidden;
         }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(255, 255, 255, 0.05), 0 4px 6px -2px rgba(255, 255, 255, 0.05);
+        .tracklist-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            padding: 8px;
+            pointer-events: none; /* Allows click-through to the link */
+        }
+        .card-image-container:hover .tracklist-overlay {
+            opacity: 1;
+            pointer-events: auto; /* Make it interactive on hover */
+        }
+        .tracklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+            width: 100%;
+            font-size: 11px;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+        .tracklist li {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 1px 0;
         }
         .active-filter {
-            background-color: #4F46E5; /* indigo-600 */
+            background-color: #4F46E5;
             color: white;
             border-color: #4F46E5;
         }
         .inactive-filter {
-            background-color: #111827; /* gray-900 */
-            color: #D1D5DB; /* gray-300 */
-            border-color: #374151; /* gray-700 */
+            background-color: #111827;
+            color: #D1D5DB;
+            border-color: #374151;
         }
         .inactive-filter:hover {
-             background-color: #374151; /* gray-700 */
+             background-color: #374151;
         }
-        /* Asegurar que los botones también usen la fuente correcta */
         button {
             font-family: 'Geist Mono', monospace;
         }
@@ -91,27 +119,22 @@
 
     <script>
         // --- CONFIGURACIÓN ---
-        // ADVERTENCIA: ¡Cualquiera con acceso a esta página puede ver este token!
-        // Reemplaza los valores de abajo con tus datos de Discogs.
-
-        const USER_TO_SHOW = "snixxmon"; // <--- CAMBIA ESTO
-        const USER_TOKEN = "otGsZfywMtiYoEtbTICQqxTOwtubkZbzojAwGjiS";    // <--- CAMBIA ESTO
+        const USER_TO_SHOW = "snixxmon";
+        const USER_TOKEN = "otGsZfywMtiYoEtbTICQqxTOwtubkZbzojAwGjiS";
 
         // --- Fin de la Configuración ---
 
-
-        // Selección de elementos del DOM
+        // Selección de elementos del DOM y caché
         const controlsDiv = document.getElementById('controls');
         const collectionBtn = document.getElementById('collection-btn');
         const wantlistBtn = document.getElementById('wantlist-btn');
         const resultsGrid = document.getElementById('results-grid');
         const loader = document.getElementById('loader');
         const errorMessageDiv = document.getElementById('error-message');
-        const headerSubtitle = document.getElementById('header-subtitle');
-
-        // Caché para almacenar los datos
+        
         let collectionCache = [];
         let wantlistCache = [];
+        const releaseDetailsCache = {}; // Caché para los detalles de los lanzamientos (tracklist)
         let currentView = 'collection';
 
         // --- MANEJADORES DE EVENTOS ---
@@ -129,8 +152,6 @@
                 controlsDiv.classList.add('hidden');
                 return;
             }
-
-            resultsGrid.innerHTML = '';
             
             try {
                 const [collectionData, wantlistData] = await Promise.all([
@@ -141,19 +162,13 @@
                 collectionCache = collectionData.releases || [];
                 wantlistCache = wantlistData.wants || [];
                 
-                // No es necesario cambiar el subtítulo aquí ya que está fijo en el HTML
                 loader.classList.add('hidden');
-
                 renderResults();
 
             } catch (error) {
                 loader.classList.add('hidden');
                 controlsDiv.classList.add('hidden');
-                let friendlyMessage = `Error: ${error.message}. Asegúrate de que el usuario y token en el código son correctos.`;
-                if (error.message.includes('Not Found')) {
-                    friendlyMessage = 'Error: No se encontró el usuario. Por favor, verifica el nombre de usuario de Discogs en el código.';
-                }
-                showError(friendlyMessage);
+                showError(`Error: ${error.message}. Verifica que el usuario y token sean correctos.`);
                 console.error(error);
             }
         }
@@ -163,9 +178,7 @@
             const targetUrl = `https://api.discogs.com/${endpoint}&token=${USER_TOKEN}`;
             const apiUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
             
-            const response = await fetch(apiUrl, {
-                headers: { 'User-Agent': 'MiColeccionDeVinilosWeb/1.0' }
-            });
+            const response = await fetch(apiUrl, { headers: { 'User-Agent': 'MiColeccionDeVinilosWeb/1.0' } });
 
             if (!response.ok) {
                 let errorData;
@@ -175,7 +188,7 @@
             }
             return response.json();
         }
-        
+
         function switchView(view) {
             currentView = view;
             updateFilterButtons();
@@ -187,31 +200,82 @@
             const dataToRender = currentView === 'collection' ? collectionCache : wantlistCache;
 
             if (dataToRender.length === 0) {
-                const messageType = currentView === 'collection' ? 'colección' : 'lista de deseos';
-                resultsGrid.innerHTML = `<p class="col-span-full text-center text-gray-500">La ${messageType} de ${USER_TO_SHOW} está vacía.</p>`;
+                resultsGrid.innerHTML = `<p class="col-span-full text-center text-gray-500">La ${currentView === 'collection' ? 'colección' : 'lista de deseos'} de ${USER_TO_SHOW} está vacía.</p>`;
                 return;
             }
 
             dataToRender.forEach(item => {
                 const info = item.basic_information;
-                const releaseUrl = `https://www.discogs.com/release/${info.id}`;
+                const releaseId = info.id;
+                const releaseUrl = `https://www.discogs.com/release/${releaseId}`;
                 
                 const card = document.createElement('div');
-                card.className = 'card bg-gray-900 rounded-lg overflow-hidden shadow-md border border-gray-800';
+                card.className = 'card bg-white text-black rounded-lg overflow-hidden shadow-lg border border-gray-800 flex flex-col';
                 card.innerHTML = `
-                    <a href="${releaseUrl}" target="_blank" rel="noopener noreferrer">
-                        <img src="${info.cover_image}" alt="Portada de ${info.title}" 
-                             onerror="this.onerror=null;this.src='https://placehold.co/300x300/111827/FFFFFF?text=Sin+Imagen';"
-                             class="w-full h-auto aspect-square object-cover">
-                    </a>
+                    <div class="card-image-container">
+                        <a href="${releaseUrl}" target="_blank" rel="noopener noreferrer">
+                            <img src="${info.cover_image}" alt="Portada de ${info.title}" 
+                                onerror="this.onerror=null;this.src='https://placehold.co/300x300/e5e7eb/374151?text=Sin+Imagen';"
+                                class="w-full h-auto aspect-square object-cover">
+                        </a>
+                        <div class="tracklist-overlay">
+                            <div class="tracklist-loader">
+                                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                            <ul class="tracklist"></ul>
+                        </div>
+                    </div>
                     <div class="p-3">
-                        <h3 class="font-bold text-sm truncate text-white">${info.title}</h3>
-                        <p class="text-xs text-gray-400 truncate">${info.artists.map(a => a.name).join(', ')}</p>
+                        <h3 class="font-bold text-sm truncate text-black">${info.title}</h3>
+                        <p class="text-xs text-gray-700 truncate">${info.artists.map(a => a.name).join(', ')}</p>
                         <p class="text-xs text-gray-500">${info.year || 'Año desc.'}</p>
                     </div>
                 `;
                 resultsGrid.appendChild(card);
+
+                // Añadir evento para cargar el tracklist al pasar el ratón
+                const imageContainer = card.querySelector('.card-image-container');
+                imageContainer.addEventListener('mouseenter', () => handleTracklistHover(releaseId, card));
             });
+        }
+
+        async function handleTracklistHover(releaseId, cardElement) {
+            const overlay = cardElement.querySelector('.tracklist-overlay');
+            const tracklistUl = cardElement.querySelector('.tracklist');
+            const loader = cardElement.querySelector('.tracklist-loader');
+
+            // Si ya tenemos los datos en caché, los mostramos
+            if (releaseDetailsCache[releaseId]) {
+                populateTracklist(tracklistUl, releaseDetailsCache[releaseId]);
+                loader.classList.add('hidden');
+                return;
+            }
+
+            // Si no, mostramos el loader y hacemos la petición
+            loader.classList.remove('hidden');
+            tracklistUl.innerHTML = '';
+
+            try {
+                const releaseDetails = await fetchFromDiscogs(`releases/${releaseId}`);
+                releaseDetailsCache[releaseId] = releaseDetails.tracklist || []; // Guardamos en caché
+                populateTracklist(tracklistUl, releaseDetailsCache[releaseId]);
+            } catch (error) {
+                console.error(`Error fetching tracklist for ${releaseId}:`, error);
+                tracklistUl.innerHTML = '<li>Error al cargar canciones.</li>';
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+        
+        function populateTracklist(ulElement, tracklist) {
+            if (!tracklist || tracklist.length === 0) {
+                ulElement.innerHTML = '<li>No hay lista de canciones disponible.</li>';
+                return;
+            }
+            ulElement.innerHTML = tracklist.map(track => `<li>${track.position}. ${track.title}</li>`).join('');
         }
         
         function updateFilterButtons() {
