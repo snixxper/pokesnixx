@@ -154,9 +154,9 @@
             }
             
             try {
-                // **FIX**: Fetching data sequentially to improve reliability with the proxy.
                 const collectionData = await fetchFromDiscogs(`users/${USER_TO_SHOW}/collection/folders/0/releases?sort=added&sort_order=desc`);
-                const wantlistData = await fetchFromDiscogs(`users/${USER_TO_SHOW}/wantlist?sort=added&sort_order=desc`);
+                // **FIX**: Simplified the wantlist request for better stability by removing optional sort parameters.
+                const wantlistData = await fetchFromDiscogs(`users/${USER_TO_SHOW}/wantlist`);
 
                 collectionCache = collectionData.releases || [];
                 wantlistCache = wantlistData.wants || [];
@@ -174,7 +174,6 @@
         
         async function fetchFromDiscogs(endpoint) {
             const proxyUrl = 'https://api.allorigins.win/raw?url=';
-            // **FIX**: Correctly determines whether to use '?' or '&' for the token parameter.
             const separator = endpoint.includes('?') ? '&' : '?';
             const targetUrl = `https://api.discogs.com/${endpoint}${separator}token=${USER_TOKEN}`;
             const apiUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
