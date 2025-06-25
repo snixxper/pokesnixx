@@ -3,51 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Colección de Vinilos | Discogs</title>
+    <title>Coleccion de Vinilos | Discogs</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Fuentes nuevas -->
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist-font@1.3.0/dist/geist-mono.css"/>
+
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            /* Fuente Geist Mono aplicada a toda la página */
+            font-family: 'Geist Mono', monospace;
+        }
+        h1 {
+            /* Fuente Bebas Neue para el título */
+            font-family: 'Bebas Neue', sans-serif;
+            letter-spacing: 2px; /* Espaciado entre letras para mejorar el estilo */
         }
         .card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 15px -3px rgba(255, 255, 255, 0.05), 0 4px 6px -2px rgba(255, 255, 255, 0.05);
         }
         .active-filter {
             background-color: #4F46E5; /* indigo-600 */
             color: white;
+            border-color: #4F46E5;
         }
         .inactive-filter {
-            background-color: #374151; /* gray-700 */
+            background-color: #111827; /* gray-900 */
             color: #D1D5DB; /* gray-300 */
+            border-color: #374151; /* gray-700 */
         }
         .inactive-filter:hover {
-             background-color: #4B5563; /* gray-600 */
+             background-color: #374151; /* gray-700 */
+        }
+        /* Asegurar que los botones también usen la fuente correcta */
+        button {
+            font-family: 'Geist Mono', monospace;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
+<body class="bg-black text-white min-h-screen">
     
     <div class="container mx-auto p-4 md:p-8">
         
         <header class="text-center mb-8 pt-8">
-            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">Mi Colección de Vinilos</h1>
-            <p id="header-subtitle" class="text-lg text-gray-400">Impulsado por la API de Discogs</p>
+            <h1 class="text-5xl font-bold text-white mb-2">Coleccion de Vinilos</h1>
+            <p id="header-subtitle" class="text-lg text-gray-400">Data de Discogs</p>
         </header>
 
         <!-- Controles de Filtro -->
         <div id="controls" class="text-center mb-8">
-            <div class="inline-flex rounded-md shadow-sm" role="group">
-                <button id="collection-btn" type="button" class="py-2 px-4 text-sm font-medium rounded-l-lg active-filter transition-colors duration-300">
+            <div class="inline-flex shadow-sm" role="group">
+                <button id="collection-btn" type="button" class="py-2 px-4 text-sm font-medium border active-filter transition-colors duration-300">
                     Mi Colección
                 </button>
-                <button id="wantlist-btn" type="button" class="py-2 px-4 text-sm font-medium rounded-r-md inactive-filter transition-colors duration-300">
+                <button id="wantlist-btn" type="button" class="py-2 px-4 text-sm font-medium border inactive-filter transition-colors duration-300">
                     Lista de Deseos
                 </button>
             </div>
@@ -78,8 +94,8 @@
         // ADVERTENCIA: ¡Cualquiera con acceso a esta página puede ver este token!
         // Reemplaza los valores de abajo con tus datos de Discogs.
 
-        const USER_TO_SHOW = "snixxmon"; // <--- CAMBIA ESTO
-        const USER_TOKEN = "otGsZfywMtiYoEtbTICQqxTOwtubkZbzojAwGjiS";    // <--- CAMBIA ESTO
+        const USER_TO_SHOW = "PON_TU_USUARIO_AQUI"; // <--- CAMBIA ESTO
+        const USER_TOKEN = "PON_TU_TOKEN_AQUI";    // <--- CAMBIA ESTO
 
         // --- Fin de la Configuración ---
 
@@ -125,7 +141,7 @@
                 collectionCache = collectionData.releases || [];
                 wantlistCache = wantlistData.wants || [];
                 
-                headerSubtitle.textContent = `Colección de ${USER_TO_SHOW}`;
+                // No es necesario cambiar el subtítulo aquí ya que está fijo en el HTML
                 loader.classList.add('hidden');
 
                 renderResults();
@@ -181,11 +197,11 @@
                 const releaseUrl = `https://www.discogs.com/release/${info.id}`;
                 
                 const card = document.createElement('div');
-                card.className = 'card bg-gray-800 rounded-lg overflow-hidden shadow-md';
+                card.className = 'card bg-gray-900 rounded-lg overflow-hidden shadow-md border border-gray-800';
                 card.innerHTML = `
                     <a href="${releaseUrl}" target="_blank" rel="noopener noreferrer">
                         <img src="${info.cover_image}" alt="Portada de ${info.title}" 
-                             onerror="this.onerror=null;this.src='https://placehold.co/300x300/1F2937/FFFFFF?text=Sin+Imagen';"
+                             onerror="this.onerror=null;this.src='https://placehold.co/300x300/111827/FFFFFF?text=Sin+Imagen';"
                              class="w-full h-auto aspect-square object-cover">
                     </a>
                     <div class="p-3">
