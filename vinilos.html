@@ -33,41 +33,16 @@
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
-
+    
     <div class="container mx-auto p-4 md:p-8">
         
-        <header class="text-center mb-8">
+        <header class="text-center mb-8 pt-8">
             <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">Mi Colección de Vinilos</h1>
-            <p class="text-lg text-gray-400">Impulsado por la API de Discogs</p>
+            <p id="header-subtitle" class="text-lg text-gray-400">Impulsado por la API de Discogs</p>
         </header>
 
-        <!-- Sección de Configuración -->
-        <div id="setup" class="max-w-xl mx-auto bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-            <h2 class="text-2xl font-bold mb-4 text-center">Configuración Inicial</h2>
-            <div class="mb-4">
-                <label for="discogs-username" class="block text-sm font-medium text-gray-300 mb-1">Nombre de Usuario de Discogs</label>
-                <input type="text" id="discogs-username" class="w-full bg-gray-700 border border-gray-600 text-white rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="TuUsuarioDeDiscogs">
-            </div>
-            <div class="mb-4">
-                <label for="discogs-token" class="block text-sm font-medium text-gray-300 mb-1">Token de Acceso Personal</label>
-                <input type="password" id="discogs-token" class="w-full bg-gray-700 border border-gray-600 text-white rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Pega tu token aquí">
-            </div>
-            <div class="text-xs text-gray-400 mb-4">
-                <p><strong>¿Cómo obtener un token?</strong></p>
-                <ol class="list-decimal list-inside ml-2">
-                    <li>Inicia sesión en Discogs.</li>
-                    <li>Ve a <a href="https://www.discogs.com/settings/developers" target="_blank" class="text-indigo-400 hover:underline">Ajustes de Desarrollador</a>.</li>
-                    <li>Haz clic en "Generate new token".</li>
-                    <li>Copia y pega el token generado aquí.</li>
-                </ol>
-            </div>
-            <button id="fetch-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300">
-                Mostrar Mi Música
-            </button>
-        </div>
-
-        <!-- Controles de Filtro (inicialmente ocultos) -->
-        <div id="controls" class="text-center mb-8 hidden">
+        <!-- Controles de Filtro -->
+        <div id="controls" class="text-center mb-8">
             <div class="inline-flex rounded-md shadow-sm" role="group">
                 <button id="collection-btn" type="button" class="py-2 px-4 text-sm font-medium rounded-l-lg active-filter transition-colors duration-300">
                     Mi Colección
@@ -81,7 +56,7 @@
         <!-- Contenedor de Resultados -->
         <div id="results-container">
              <!-- Loader -->
-            <div id="loader" class="text-center py-10 hidden">
+            <div id="loader" class="text-center py-10">
                 <svg class="animate-spin h-8 w-8 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -90,10 +65,6 @@
             </div>
             <!-- Mensaje de Error -->
             <div id="error-message" class="text-center py-10 hidden bg-red-900/50 border border-red-500 text-red-300 p-4 rounded-lg"></div>
-            <!-- Mensaje Inicial -->
-            <div id="placeholder-message" class="text-center py-20">
-                <p class="text-gray-500">Ingresa tus datos para ver tu colección.</p>
-            </div>
              <!-- Grid para los vinilos -->
             <div id="results-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
                 <!-- Las tarjetas de los vinilos se insertarán aquí -->
@@ -103,157 +74,109 @@
     </div>
 
     <script>
+        // --- CONFIGURACIÓN ---
+        // ADVERTENCIA: ¡Cualquiera con acceso a esta página puede ver este token!
+        // Reemplaza los valores de abajo con tus datos de Discogs.
+
+        const USER_TO_SHOW = "snixxmon"; // <--- CAMBIA ESTO
+        const USER_TOKEN = "otGsZfywMtiYoEtbTICQqxTOwtubkZbzojAwGjiS";    // <--- CAMBIA ESTO
+
+        // --- Fin de la Configuración ---
+
+
         // Selección de elementos del DOM
-        const setupDiv = document.getElementById('setup');
         const controlsDiv = document.getElementById('controls');
-        const fetchButton = document.getElementById('fetch-button');
         const collectionBtn = document.getElementById('collection-btn');
         const wantlistBtn = document.getElementById('wantlist-btn');
         const resultsGrid = document.getElementById('results-grid');
         const loader = document.getElementById('loader');
         const errorMessageDiv = document.getElementById('error-message');
-        const placeholderMessage = document.getElementById('placeholder-message');
-        const usernameInput = document.getElementById('discogs-username');
-        const tokenInput = document.getElementById('discogs-token');
+        const headerSubtitle = document.getElementById('header-subtitle');
 
-        // Caché para almacenar los datos y no pedirlos cada vez
+        // Caché para almacenar los datos
         let collectionCache = [];
         let wantlistCache = [];
-        let currentView = 'collection'; // 'collection' o 'wantlist'
+        let currentView = 'collection';
 
         // --- MANEJADORES DE EVENTOS ---
 
-        fetchButton.addEventListener('click', handleFetchData);
+        document.addEventListener('DOMContentLoaded', handleFetchData);
         collectionBtn.addEventListener('click', () => switchView('collection'));
         wantlistBtn.addEventListener('click', () => switchView('wantlist'));
 
         // --- LÓGICA PRINCIPAL ---
-
-        /**
-         * Inicia el proceso de obtención de datos desde la API de Discogs.
-         */
+        
         async function handleFetchData() {
-            const username = usernameInput.value.trim();
-            const token = tokenInput.value.trim();
-
-            if (!username || !token) {
-                showError("Por favor, ingresa tu nombre de usuario y token de Discogs.");
+            if (USER_TO_SHOW === "PON_TU_USUARIO_AQUI" || USER_TOKEN === "PON_TU_TOKEN_AQUI") {
+                showError("Error de configuración: Debes editar el archivo HTML para añadir tu usuario y token.");
+                loader.classList.add('hidden');
+                controlsDiv.classList.add('hidden');
                 return;
             }
 
-            // Mostrar loader y ocultar mensajes
-            loader.classList.remove('hidden');
-            placeholderMessage.classList.add('hidden');
-            errorMessageDiv.classList.add('hidden');
             resultsGrid.innerHTML = '';
-
+            
             try {
-                // Hacemos las dos peticiones en paralelo para más eficiencia
                 const [collectionData, wantlistData] = await Promise.all([
-                    fetchFromDiscogs(`users/${username}/collection/folders/0/releases?sort=added&sort_order=desc`, token),
-                    fetchFromDiscogs(`users/${username}/wantlist?sort=added&sort_order=desc`, token)
+                    fetchFromDiscogs(`users/${USER_TO_SHOW}/collection/folders/0/releases?sort=added&sort_order=desc`),
+                    fetchFromDiscogs(`users/${USER_TO_SHOW}/wantlist?sort=added&sort_order=desc`)
                 ]);
 
-                // Guardamos los datos en la caché
                 collectionCache = collectionData.releases || [];
                 wantlistCache = wantlistData.wants || [];
                 
-                // Ocultamos la configuración y el loader, mostramos los controles
-                setupDiv.classList.add('hidden');
-                controlsDiv.classList.remove('hidden');
+                headerSubtitle.textContent = `Colección de ${USER_TO_SHOW}`;
                 loader.classList.add('hidden');
 
-                // Mostramos la vista por defecto (colección)
                 renderResults();
 
             } catch (error) {
                 loader.classList.add('hidden');
-                let friendlyMessage = `Error: ${error.message}. Asegúrate de que tu nombre de usuario y token son correctos y no tienen espacios extra.`;
-                 if (error.message.includes('Not Found')) {
-                    friendlyMessage = 'Error: No se encontró el usuario. Por favor, verifica que el nombre de usuario de Discogs es correcto.';
+                controlsDiv.classList.add('hidden');
+                let friendlyMessage = `Error: ${error.message}. Asegúrate de que el usuario y token en el código son correctos.`;
+                if (error.message.includes('Not Found')) {
+                    friendlyMessage = 'Error: No se encontró el usuario. Por favor, verifica el nombre de usuario de Discogs en el código.';
                 }
                 showError(friendlyMessage);
                 console.error(error);
             }
         }
-
-        /**
-         * Función genérica para hacer peticiones a la API de Discogs.
-         * @param {string} endpoint - El endpoint de la API a consultar.
-         * @param {string} token - El token de acceso personal.
-         * @returns {Promise<object>} - La respuesta JSON de la API.
-         */
-        async function fetchFromDiscogs(endpoint, token) {
-            // **FIX**: Se usa un proxy CORS para evitar problemas al abrir el archivo localmente.
-            // Este proxy añade las cabeceras necesarias para que el navegador permita la petición.
+        
+        async function fetchFromDiscogs(endpoint) {
             const proxyUrl = 'https://api.allorigins.win/raw?url=';
-            const targetUrl = `https://api.discogs.com/${endpoint}`;
+            const targetUrl = `https://api.discogs.com/${endpoint}&token=${USER_TOKEN}`;
             const apiUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
-
-            const headers = {
-                'User-Agent': 'MiColeccionDeVinilosWeb/1.0',
-                'Authorization': `Discogs token=${token}`,
-            };
             
-            // Nota: El proxy reenvía la petición con las cabeceras, pero la autorización
-            // la maneja Discogs. El proxy solo soluciona el problema de CORS del navegador.
-            const response = await fetch(apiUrl, { 
-                headers: {
-                    // La autorización real va en la URL codificada para que Discogs la reciba.
-                    // Para este proxy específico (allorigins), se simula la petición directa.
-                    // La lógica puede cambiar según el proxy, pero este es transparente.
-                    // ¡Importante! La cabecera de Authorization debe ir en la petición original
-                    // que el proxy va a realizar, por lo que este método de encapsular la URL funciona.
-                    // Sin embargo, una forma más robusta es enviar las cabeceras al proxy si lo permite.
-                    // Para simplificar, confiamos en el reenvío.
-                } 
+            const response = await fetch(apiUrl, {
+                headers: { 'User-Agent': 'MiColeccionDeVinilosWeb/1.0' }
             });
 
-
             if (!response.ok) {
-                 // Intentamos leer el error de la respuesta, si lo hay.
                 let errorData;
-                try {
-                    errorData = await response.json();
-                } catch(e) {
-                    throw new Error(`Error de red o del proxy. Estatus: ${response.status}`);
-                }
+                try { errorData = await response.json(); } 
+                catch(e) { throw new Error(`Error de red o del proxy. Estatus: ${response.status}`); }
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
-            
-            // Este proxy específico envuelve la respuesta en un objeto 'contents', 
-            // así que necesitamos parsearlo dos veces.
-            const data = await response.json();
-            return data;
+            return response.json();
         }
         
-        /**
-         * Cambia entre la vista de "Colección" y "Lista de Deseos".
-         * @param {string} view - La vista a mostrar ('collection' o 'wantlist').
-         */
         function switchView(view) {
             currentView = view;
             updateFilterButtons();
             renderResults();
         }
 
-        // --- FUNCIONES DE RENDERIZADO ---
-
-        /**
-         * Renderiza los resultados en el grid según la vista actual.
-         */
         function renderResults() {
-            resultsGrid.innerHTML = ''; // Limpiar el grid
+            resultsGrid.innerHTML = ''; 
             const dataToRender = currentView === 'collection' ? collectionCache : wantlistCache;
 
             if (dataToRender.length === 0) {
                 const messageType = currentView === 'collection' ? 'colección' : 'lista de deseos';
-                resultsGrid.innerHTML = `<p class="col-span-full text-center text-gray-500">Tu ${messageType} está vacía.</p>`;
+                resultsGrid.innerHTML = `<p class="col-span-full text-center text-gray-500">La ${messageType} de ${USER_TO_SHOW} está vacía.</p>`;
                 return;
             }
 
             dataToRender.forEach(item => {
-                // La estructura de datos es ligeramente diferente para colección y wantlist
                 const info = item.basic_information;
                 const releaseUrl = `https://www.discogs.com/release/${info.id}`;
                 
@@ -275,9 +198,6 @@
             });
         }
         
-        /**
-         * Actualiza el estilo de los botones de filtro.
-         */
         function updateFilterButtons() {
             if (currentView === 'collection') {
                 collectionBtn.classList.replace('inactive-filter', 'active-filter');
@@ -288,10 +208,6 @@
             }
         }
 
-        /**
-         * Muestra un mensaje de error en la UI.
-         * @param {string} message - El mensaje de error a mostrar.
-         */
         function showError(message) {
             errorMessageDiv.textContent = message;
             errorMessageDiv.classList.remove('hidden');
