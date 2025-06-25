@@ -134,7 +134,7 @@
         
         let collectionCache = [];
         let wantlistCache = [];
-        const releaseDetailsCache = {}; // Caché para los detalles de los lanzamientos (tracklist)
+        const releaseDetailsCache = {};
         let currentView = 'collection';
 
         // --- MANEJADORES DE EVENTOS ---
@@ -145,8 +145,10 @@
 
         // --- LÓGICA PRINCIPAL ---
         
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
         async function handleFetchData() {
-            if (USER_TO_SHOW === "PON_TU_USUARIO_AQUI" || USER_TOKEN === "PON_TU_TOKEN_AQUI") {
+            if (USER_TO_SHOW === "snixxmon" || USER_TOKEN === "OttuqhEOvRYRtsbpHHLlPXpTXvVmfmixPBXtmJOM") {
                 showError("Error de configuración: Debes editar el archivo HTML para añadir tu usuario y token.");
                 loader.classList.add('hidden');
                 controlsDiv.classList.add('hidden');
@@ -155,7 +157,7 @@
             
             try {
                 const collectionData = await fetchFromDiscogs(`users/${USER_TO_SHOW}/collection/folders/0/releases?sort=added&sort_order=desc`);
-                // **FIX**: Simplified the wantlist request for better stability by removing optional sort parameters.
+                await delay(500); 
                 const wantlistData = await fetchFromDiscogs(`users/${USER_TO_SHOW}/wantlist`);
 
                 collectionCache = collectionData.releases || [];
@@ -167,13 +169,14 @@
             } catch (error) {
                 loader.classList.add('hidden');
                 controlsDiv.classList.add('hidden');
-                showError(`Error: ${error.message}. Verifica que el usuario y token sean correctos.`);
-                console.error(error);
+                showError(`Error: ${error.message}. Verifica que el usuario y token sean correctos, y que tienes conexión a internet.`);
+                console.error("Fetch error details:", error);
             }
         }
         
         async function fetchFromDiscogs(endpoint) {
-            const proxyUrl = 'https://api.allorigins.win/raw?url=';
+            // **FIX**: Switched to a more reliable proxy to prevent "load failed" errors.
+            const proxyUrl = 'https://corsproxy.io/?';
             const separator = endpoint.includes('?') ? '&' : '?';
             const targetUrl = `https://api.discogs.com/${endpoint}${separator}token=${USER_TOKEN}`;
             const apiUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
@@ -181,13 +184,20 @@
             const response = await fetch(apiUrl, { headers: { 'User-Agent': 'MiColeccionDeVinilosWeb/1.0' } });
 
             if (!response.ok) {
+                // This will catch HTTP errors (like 404, 500) that the proxy forwards from Discogs
                 let errorData;
-                try { errorData = await response.json(); } 
-                catch(e) { throw new Error(`Error de red o del proxy. Estatus: ${response.status}`); }
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                try { 
+                    errorData = await response.json(); 
+                } catch(e) { 
+                    // This catches errors where the response is not JSON (e.g., plain text error from proxy)
+                    throw new Error(`Error de red o del proxy. Estatus: ${response.status}`); 
+                }
+                throw new Error(errorData.message || `Ocurrió un error con la API de Discogs.`);
             }
+            // If the fetch itself fails (e.g., no network), the promise will reject, and it will be caught by handleFetchData
             return response.json();
         }
+
 
         function switchView(view) {
             currentView = view;
@@ -236,31 +246,27 @@
                 `;
                 resultsGrid.appendChild(card);
 
-                // Añadir evento para cargar el tracklist al pasar el ratón
                 const imageContainer = card.querySelector('.card-image-container');
                 imageContainer.addEventListener('mouseenter', () => handleTracklistHover(releaseId, card));
             });
         }
 
         async function handleTracklistHover(releaseId, cardElement) {
-            const overlay = cardElement.querySelector('.tracklist-overlay');
             const tracklistUl = cardElement.querySelector('.tracklist');
             const loader = cardElement.querySelector('.tracklist-loader');
 
-            // Si ya tenemos los datos en caché, los mostramos
             if (releaseDetailsCache[releaseId]) {
                 populateTracklist(tracklistUl, releaseDetailsCache[releaseId]);
                 loader.classList.add('hidden');
                 return;
             }
 
-            // Si no, mostramos el loader y hacemos la petición
             loader.classList.remove('hidden');
             tracklistUl.innerHTML = '';
 
             try {
                 const releaseDetails = await fetchFromDiscogs(`releases/${releaseId}`);
-                releaseDetailsCache[releaseId] = releaseDetails.tracklist || []; // Guardamos en caché
+                releaseDetailsCache[releaseId] = releaseDetails.tracklist || [];
                 populateTracklist(tracklistUl, releaseDetailsCache[releaseId]);
             } catch (error) {
                 console.error(`Error fetching tracklist for ${releaseId}:`, error);
