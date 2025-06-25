@@ -119,8 +119,8 @@
 
     <script>
         // --- CONFIGURACIÓN ---
-        const USER_TO_SHOW = "snixxmon";
-        const USER_TOKEN = "otGsZfywMtiYoEtbTICQqxTOwtubkZbzojAwGjiS";
+        const USER_TO_SHOW = "PON_TU_USUARIO_AQUI";
+        const USER_TOKEN = "PON_TU_TOKEN_AQUI";
 
         // --- Fin de la Configuración ---
 
@@ -146,7 +146,7 @@
         // --- LÓGICA PRINCIPAL ---
         
         async function handleFetchData() {
-            if (USER_TO_SHOW === "PON_TU_USUARIO_AQUI" || USER_TOKEN === "PON_TU_TOKEN_AQUI") {
+            if (USER_TO_SHOW === "snixxmon" || USER_TOKEN === "otGsZfywMtiYoEtbTICQqxTOwtubkZbzojAwGjiS") {
                 showError("Error de configuración: Debes editar el archivo HTML para añadir tu usuario y token.");
                 loader.classList.add('hidden');
                 controlsDiv.classList.add('hidden');
@@ -154,10 +154,9 @@
             }
             
             try {
-                const [collectionData, wantlistData] = await Promise.all([
-                    fetchFromDiscogs(`users/${USER_TO_SHOW}/collection/folders/0/releases?sort=added&sort_order=desc`),
-                    fetchFromDiscogs(`users/${USER_TO_SHOW}/wantlist?sort=added&sort_order=desc`)
-                ]);
+                // **FIX**: Fetching data sequentially to improve reliability with the proxy.
+                const collectionData = await fetchFromDiscogs(`users/${USER_TO_SHOW}/collection/folders/0/releases?sort=added&sort_order=desc`);
+                const wantlistData = await fetchFromDiscogs(`users/${USER_TO_SHOW}/wantlist?sort=added&sort_order=desc`);
 
                 collectionCache = collectionData.releases || [];
                 wantlistCache = wantlistData.wants || [];
@@ -175,7 +174,9 @@
         
         async function fetchFromDiscogs(endpoint) {
             const proxyUrl = 'https://api.allorigins.win/raw?url=';
-            const targetUrl = `https://api.discogs.com/${endpoint}&token=${USER_TOKEN}`;
+            // **FIX**: Correctly determines whether to use '?' or '&' for the token parameter.
+            const separator = endpoint.includes('?') ? '&' : '?';
+            const targetUrl = `https://api.discogs.com/${endpoint}${separator}token=${USER_TOKEN}`;
             const apiUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
             
             const response = await fetch(apiUrl, { headers: { 'User-Agent': 'MiColeccionDeVinilosWeb/1.0' } });
